@@ -2,22 +2,21 @@ import {ok} from "../is";
 import {Transporter, SendMailOptions} from "nodemailer";
 import {DurableEventData, DurableEventSchedule} from "../data";
 import {on, dispatchEvent} from "../events";
-
-export const {
+import {
+    MAIL_FROM,
+    MAIL_SENDER,
+    MAIL_PASSWORD,
+    MAIL_USERNAME,
     MAIL_MAILER,
     MAIL_URL,
-    MAIL_HOST = "smtp.mailgun.org",
-    MAIL_PORT = "587",
-    MAIL_USERNAME,
-    MAIL_PASSWORD,
-    MAIL_ENCRYPTION = "tls",
+    MAIL_HOST,
+    MAIL_PORT,
     MAIL_SENDMAIL_PATH,
     MAIL_MAILGUN_API_KEY,
     MAIL_MAILGUN_DOMAIN,
-    MAIL_FROM,
-    MAIL_SENDER,
+    MAIL_ENCRYPTION,
     MAIL_REPLY_TO
-} = process.env;
+} from "../config";
 
 export interface EmailOptions extends SendMailOptions {
     schedule?: DurableEventSchedule;
