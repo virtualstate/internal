@@ -24,7 +24,7 @@ await periodicSync.register("images", {
 });
 
 // Ran elsewhere by scheduler
-// Is usually managed by
+// Is usually managed by generatePeriodicSyncVirtualEvents
 await dispatchEvent({
     type: "periodicsync",
     tag: "images",
