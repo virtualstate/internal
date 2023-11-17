@@ -1,2 +1,2 @@
 export * from "./event";
-export { on, cron, ScheduledFunctionOptions, ScheduledOptions, ScheduledFn } from "./schedule";
+export { addEventListener, removeEventListener, on, cron, ScheduledFunctionOptions, ScheduledOptions, ScheduledFn } from "./schedule";

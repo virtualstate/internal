@@ -9,7 +9,7 @@ const entry = {
     icons: [
         {
             src: "https://javascript.org.nz/logo.png",
-            sizes: "128x128",
+            sizes: "200x200",
             type: "image/png",
         },
     ],
