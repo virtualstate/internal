@@ -59,7 +59,7 @@ jobs:
       - name: test:node with PORT
         run: yarn test:node
         env:
-          PORT: 3400\
+          PORT: 3400
       - name: test:bun with PORT
         run: yarn test:bun
         env:

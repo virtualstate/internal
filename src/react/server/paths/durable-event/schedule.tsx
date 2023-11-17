@@ -15,8 +15,8 @@ import {
 } from "../../../../data";
 import {ok} from "../../../../is";
 import {DispatchEvent, dispatchEvent, isDispatchEvent} from "../../../../events";
+import {DateTime} from "luxon";
 import {DEFAULT_TIMEZONE} from "../../../../config";
-import {fromWebDate} from "../appointment/create";
 
 export const path = "/durable-event/schedule";
 
@@ -213,3 +213,16 @@ export function ScheduleDurableEvent() {
 }
 
 export const Component = ScheduleDurableEvent;
+
+
+export function fromWebDate(value?: string, timezone?: string) {
+    if (!value) return undefined;
+    let date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        date = DateTime.fromFormat(value, "yyyy-MM-dd", { zone: timezone || DEFAULT_TIMEZONE }).toJSDate();
+    } else {
+        date = DateTime.fromJSDate(new Date(value), { zone: timezone || DEFAULT_TIMEZONE }).toJSDate();
+    }
+    // Use a consistent format
+    return date.toISOString()
+}

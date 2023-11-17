@@ -1,5 +1,4 @@
-import {useData, useError, useInput, useMaybeBody, useMaybeResult, useSubmitted, useTimezone} from "../../data";
-import {HappeningFormMetaData} from "../create-happening";
+import {useData, useError, useInput, useMaybeBody, useMaybeResult} from "../../data";
 import {
     isUnauthenticated,
     getUser,
