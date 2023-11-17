@@ -2,14 +2,12 @@ import {getChange} from "./get-change";
 import {Change, ChangeIdentifier} from "./types";
 import {getConfig} from "../../config";
 import {setChange} from "./set-change";
-import {AppointmentData, getAppointment, setAppointment} from "../appointment";
 import {getTask, setTask, TaskData} from "../task";
 
 export interface ProcessChangeConfig {
     change?(change: Change): Promise<boolean>
 }
 
-type AppointmentChange = Change & { data: AppointmentData };
 type TaskChange = Change & { data: TaskData };
 
 export async function change(identifier: ChangeIdentifier) {
@@ -50,35 +48,14 @@ export async function change(identifier: ChangeIdentifier) {
     }
 
     async function applyDefault() {
-        if (isAppointmentChange(change)) {
-            return applyAppointmentChange(change);
-        }
         if (isTaskChange(change)) {
             return applyTaskChange(change);
         }
         return false;
 
-        function isAppointmentChange(change: Change): change is AppointmentChange {
-            return change.target.type === "appointment" && !!change.data;
-        }
-
         function isTaskChange(change: Change): change is TaskChange {
             return change.target.type === "task" && !!change.data;
         }
-    }
-
-    async function applyAppointmentChange(change: AppointmentChange) {
-        if (change.status === "pending" && change.type === "request") {
-            const appointment = await getAppointment(change.target.id);
-            if (!appointment) return false;
-            await setAppointment({
-                ...appointment,
-                ...change.data,
-                appointmentId: appointment.appointmentId
-            });
-            return true;
-        }
-        return false;
     }
 
     async function applyTaskChange(change: TaskChange) {

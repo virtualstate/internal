@@ -3,7 +3,7 @@ import {
   Partner,
   Organisation,
   User,
-  Product, Offer, Order, PaymentMethod, AuthenticationState, Service,
+  AuthenticationState,
 } from "../../../data";
 import {createContext, ProviderProps, useContext, useMemo} from "react";
 import { ok } from "../../../is";
@@ -30,12 +30,6 @@ export interface ReactData {
   user?: User;
   authenticationState?: AuthenticationState;
   roles?: AuthenticationRole[];
-  products?: Product[];
-  services?: Service[];
-  offers?: Offer[];
-  orders?: Order[];
-  order?: Order;
-  paymentMethods?: PaymentMethod[];
 }
 
 export const DataContext = createContext<ReactData | undefined>(undefined);
@@ -198,74 +192,7 @@ export function useTimezone() {
   return timezone;
 }
 
-export function useProducts() {
-  const { products } = useData();
-  return useMemo(() => products || [], [products]);
-}
-
-export function useServices() {
-  const { services } = useData();
-  return useMemo(() => services || [], [services]);
-}
-
-export function usePaymentMethods() {
-  const { paymentMethods } = useData();
-  return useMemo(() => paymentMethods || [], [paymentMethods]);
-}
-
 export function useConfig(): Config {
   const { config } = useData();
   return config
 }
-
-export function useOffers() {
-  const { offers } = useData();
-  return useMemo(() => offers || [], [offers]);
-}
-
-export function useOrders() {
-  const { orders } = useData();
-  return useMemo(() => orders || [], [orders]);
-}
-
-export function useProduct(productId?: string): Product | undefined {
-  const products = useProducts();
-  return useMemo(() => {
-    if (!productId) return undefined;
-    return products.find((product) => product.productId === productId);
-  }, [products, productId]);
-}
-
-
-export function useService(serviceId?: string): Service | undefined {
-  const services = useServices();
-  return useMemo(() => {
-    if (!serviceId) return undefined;
-    return services.find((service) => service.serviceId === serviceId);
-  }, [services, serviceId]);
-}
-
-export function useOffer(offerId?: string): Offer | undefined {
-  const offers = useOffers();
-  return useMemo(() => {
-    if (!offerId) return undefined;
-    return offers.find((offer) => offer.offerId === offerId);
-  }, [offers, offerId]);
-}
-
-export function useOrder(orderId?: string): Order | undefined {
-  const orders = useOrders();
-  return useMemo(() => {
-    if (!orderId) return undefined;
-    return orders.find((order) => order.orderId === orderId);
-  }, [orders, orderId]);
-}
-
-export function usePaymentMethod(paymentMethodId?: string): PaymentMethod | undefined {
-  const paymentMethods = usePaymentMethods();
-  return useMemo(() => {
-    if (!paymentMethodId) return undefined;
-    return paymentMethods.find((paymentMethod) => paymentMethod.paymentMethodId === paymentMethodId);
-  }, [paymentMethods, paymentMethodId]);
-}
-

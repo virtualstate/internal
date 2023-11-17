@@ -1,6 +1,5 @@
 import {Attendee, AttendeeData} from "../attendee";
 import {Partner} from "../partner";
-import {User} from "../user";
 import {Organisation} from "../organisation";
 import {Expiring} from "../expiring";
 

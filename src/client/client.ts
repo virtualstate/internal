@@ -1,8 +1,6 @@
 import {
-    Offer,
-    OfferData,
     Partner,
-    PartnerData, Product, ProductData,
+    PartnerData,
     SystemLog,
 } from "./interface.readonly";
 import {
@@ -113,94 +111,6 @@ export class Client implements ClientInterface {
                 ...options
             }
         );
-    }
-
-    async addOffer(offer: OfferData): Promise<Offer> {
-        const response = await this.fetch(
-            `${this.prefix}/offers`,
-            {
-                method: "POST",
-                body: JSON.stringify(offer)
-            }
-        );
-        ok(response.ok, "addOffer response not ok");
-        return await response.json();
-    }
-
-    async setOffer(offer: Offer): Promise<Offer> {
-        const response = await this.fetch(
-            `${this.prefix}/offers/${offer.offerId}`,
-            {
-                method: "PUT",
-                body: JSON.stringify(offer)
-            }
-        );
-        ok(response.ok, "setOffer response not ok");
-        return await response.json();
-    }
-
-    async patchOffer(offer: Pick<Offer, "offerId"> & Partial<Offer>): Promise<Offer> {
-        const response = await this.fetch(
-            `${this.prefix}/offers/${offer.offerId}`,
-            {
-                method: "PATCH",
-                body: JSON.stringify(offer)
-            }
-        );
-        ok(response.ok, "addOffer response not ok");
-        return await response.json();
-    }
-
-    async listOffers(): Promise<Offer[]> {
-        const response = await this.fetch(
-            `${this.prefix}/offers`
-        );
-        ok(response.ok, "listOffers response not ok");
-        return response.json();
-    }
-
-    async addProduct(product: ProductData): Promise<Product> {
-        const response = await this.fetch(
-            `${this.prefix}/products`,
-            {
-                method: "POST",
-                body: JSON.stringify(product)
-            }
-        );
-        ok(response.ok, "addProduct response not ok");
-        return await response.json();
-    }
-
-    async setProduct(product: Product): Promise<Product> {
-        const response = await this.fetch(
-            `${this.prefix}/products/${product.productId}`,
-            {
-                method: "PUT",
-                body: JSON.stringify(product)
-            }
-        );
-        ok(response.ok, "setProduct response not ok");
-        return await response.json();
-    }
-
-    async patchProduct(product: Pick<Product, "productId"> & Partial<Product>): Promise<Product> {
-        const response = await this.fetch(
-            `${this.prefix}/products/${product.productId}`,
-            {
-                method: "PATCH",
-                body: JSON.stringify(product)
-            }
-        );
-        ok(response.ok, "patchProduct response not ok");
-        return await response.json();
-    }
-
-    async listProducts(): Promise<Product[]> {
-        const response = await this.fetch(
-            `${this.prefix}/products`
-        );
-        ok(response.ok, "listProducts response not ok");
-        return response.json();
     }
 
 }

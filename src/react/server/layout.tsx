@@ -1,10 +1,9 @@
 import {FunctionComponent, PropsWithChildren, ReactElement, useMemo} from "react";
 import { description, namespace, project } from "../../package";
 import { getOrigin } from "../../listen";
-import {useConfig, useData, useIsTrusted, useQuerySearch} from "./data";
+import { useConfig, useData, useIsTrusted, useQuerySearch} from "./data";
 import { importmapPath, name } from "../../package";
 import { readFile } from "node:fs/promises";
-import {ShoppingBagIcon} from "../client/components/icons";
 
 const {
   IS_LOCAL,
@@ -245,25 +244,9 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
   const { pathname } = new URL(url, getOrigin());
   const search = useQuerySearch();
   const isTrusted = useIsTrusted();
-  const { order } = useData();
-  const pendingOrder = order?.status === "pending" ? order : undefined;
-  const inOrder = pendingOrder?.products?.reduce(
-      (sum, value) => sum + (value.quantity ?? 1),
-      0
-  ) ?? 0;
   const userMenuItems = useMemo(() => {
-    const filtered = items.filter(({ trusted }) => !trusted || isTrusted);
-    if (inOrder) {
-      const last = filtered.pop();
-      filtered.push({
-        icon: <ShoppingBagIcon className={MENU_ICON_CLASS} />,
-        path: "/order/checkout/review",
-        name: `Checkout ${inOrder}${inOrder > 1 ? " Items" : ""}`
-      });
-      filtered.push(last);
-    }
-    return filtered;
-  }, [items, inOrder]);
+    return items.filter(({ trusted }) => !trusted || isTrusted)
+  }, [items, isTrusted]);
   return (
     <BaseLayout {...props}>
       <div>
