@@ -1,0 +1,3 @@
+{
+  "watch": ["esnext/.builtAt", ".env", "package.json"]
+}
