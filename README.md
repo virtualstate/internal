@@ -1,4 +1,4 @@
-# @opennetwork/logistics 
+# @virtualstate/internal 
 
 [//]: # (badges)
 
@@ -15,7 +15,7 @@
 ### Client
 
 ```typescript
-import { Client } from "@opennetwork/logistics/client";
+import { Client } from "@virtualstate/internal/client";
 
 const client = new Client({
     url: process.env.API_URL || "http://localhost:3000"

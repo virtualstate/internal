@@ -1,6 +1,6 @@
 {
-  "name": "@opennetwork/logistics",
-  "version": "1.0.0-alpha.167",
+  "name": "@virtualstate/internal",
+  "version": "1.0.0-alpha.0",
   "main": "./esnext/index.js",
   "module": "./esnext/index.js",
   "types": "./esnext/index.d.ts",
@@ -77,12 +77,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/opennetwork/logistics.git"
+    "url": "git+https://github.com/virtualstate/internal.git"
   },
   "bugs": {
-    "url": "https://github.com/opennetwork/logistics/issues"
+    "url": "https://github.com/virtualstate/internal/issues"
   },
-  "homepage": "https://github.com/opennetwork/logistics#readme",
+  "homepage": "https://github.com/virtualstate/internal#readme",
   "author": "Fabian Cook <hello@fabiancook.dev>",
   "license": "MIT",
   "dependencies": {

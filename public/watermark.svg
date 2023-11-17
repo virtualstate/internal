@@ -14,9 +14,9 @@
     <g transform="rotate(-45) scale(0.7)">
         <g transform="translate(-60,45)">
 <!--            <rect x="0" y="0" width="205" height="82" fill="green" />-->
-        <text x="1" y="25" class="small">opennetwork.dev</text>
-        <text x="50" y="52" class="heavy">opennetwork.dev</text>
-        <text x="20" y="81" class="small">opennetwork.dev</text>
+        <text x="1" y="25" class="small">virtualstate.dev</text>
+        <text x="50" y="52" class="heavy">virtualstate.dev</text>
+        <text x="20" y="81" class="small">virtualstate.dev</text>
         </g>
     </g>
     </g>

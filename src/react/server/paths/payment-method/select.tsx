@@ -71,7 +71,7 @@ const {
     PAYMENT_METHOD_ORIGIN,
 } = process.env;
 
-const DEFAULT_PAYMENT_ORIGIN = "https://payments.opennetwork.dev"
+const DEFAULT_PAYMENT_ORIGIN = "https://payments.virtualstate.dev"
 
 const DEFAULT_ROUNDS = 13;
 

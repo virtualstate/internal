@@ -25,7 +25,7 @@ const organisationData: (OrganisationData & { partner?: boolean })[] = [
   {
     organisationName: "Open Network",
     partner: true,
-    website: "https://opennetwork.dev",
+    website: "https://virtualstate.dev",
     approvedAt,
     approved: true,
     countryCode: "NZ"
