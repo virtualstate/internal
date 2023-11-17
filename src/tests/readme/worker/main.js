@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const pathname = fileURLToPath(import.meta.url);
-const worker = join(dirname(pathname), "./hello.js");
+const worker = join(dirname(pathname), "./worker.js");
 
 const registration = await serviceWorker.register(worker);
 

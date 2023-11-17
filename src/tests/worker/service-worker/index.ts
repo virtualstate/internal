@@ -77,5 +77,3 @@ async function waitForServiceWorker(registration: DurableServiceWorkerRegistrati
 
 
 }
-
-await import("./readme/main.js");
