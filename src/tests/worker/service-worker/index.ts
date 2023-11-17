@@ -8,14 +8,12 @@ import {
     executeServiceWorkerFetch,
     registerServiceWorkerFetch
 } from "../../../worker/service-worker/execute-fetch";
+import {fileURLToPath} from "node:url";
 
 export {};
 
-const instance = new URL(import.meta.url);
-const { pathname } = instance;
-const directory = dirname(pathname);
-instance.pathname = join(directory, "./worker.js");
-const worker = instance.toString();
+const pathname = fileURLToPath(import.meta.url);
+const worker = join(dirname(pathname), "./worker.js");
 
 async function waitForServiceWorker(registration: DurableServiceWorkerRegistration) {
     if (registration.active) {
@@ -79,3 +77,5 @@ async function waitForServiceWorker(registration: DurableServiceWorkerRegistrati
 
 
 }
+
+await import("./readme/main.js");

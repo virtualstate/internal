@@ -75,6 +75,9 @@
     "./main": "./esnext/main.js",
     "./start": "./esnext/start.js"
   },
+  "imports": {
+    "@virtualstate/internal": "./esnext/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/virtualstate/internal.git"

@@ -15,13 +15,6 @@ export function getServiceWorkerWorkerWorker(options?: WorkerOptions) {
     });
 }
 
-export function assertPushAsyncIterableIterator<T>(iterator: AsyncIterableIterator<T>): asserts iterator is PushAsyncIterableIterator<T> {
-    ok(
-        isLike<PushAsyncIterableIterator<T>>(iterator) &&
-        typeof iterator.clone === "function"
-    )
-}
-
 export async function executeServiceWorkerWorkerMessage(data?: ServiceWorkerWorkerData): Promise<unknown> {
     const iterator = executeServiceWorkerWorker(data)[Symbol.asyncIterator]();
     const next = await iterator.next();

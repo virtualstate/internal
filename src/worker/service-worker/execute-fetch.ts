@@ -4,6 +4,7 @@ import {executeServiceWorkerWorker} from "./execute";
 import {isLike, ok} from "../../is";
 import type {FetchResponseMessage} from "./dispatch";
 import {DurableServiceWorkerRegistration, serviceWorker} from "./container";
+import {getOrigin} from "../../listen/config";
 
 export async function registerServiceWorkerFetch(worker: string, options?: RegistrationOptions) {
     const registration = await serviceWorker.register(worker, options);
@@ -19,7 +20,7 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
             request = new Request(input, init);
         } else {
             request = {
-                url: input,
+                url: new URL(input, getOrigin()).toString(),
                 method: init?.method,
                 headers: getFetchHeadersObject(
                     new Headers(init?.headers)
