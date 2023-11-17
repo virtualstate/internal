@@ -8,7 +8,7 @@
 
 ### Test Coverage
 
- ![42.57%25 lines covered](https://img.shields.io/badge/lines-42.57%25-yellow) ![42.57%25 statements covered](https://img.shields.io/badge/statements-42.57%25-yellow) ![28.96%25 functions covered](https://img.shields.io/badge/functions-28.96%25-yellow) ![70.17%25 branches covered](https://img.shields.io/badge/branches-70.17%25-yellow)
+
 
 [//]: # (badges)
 
