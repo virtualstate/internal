@@ -19,6 +19,7 @@ import "../../fetch/dispatch";
 import {DurableEventData} from "../../data";
 import {MessagePort as NodeMessagePort, MessageChannel as NodeMessageChannel } from "node:worker_threads";
 import {dispatchWorkerEvent} from "./dispatch";
+import {getInternalStorageBucket} from "../../storage-buckets/internal";
 
 export interface ServiceWorkerWorkerData {
     serviceWorkerId: string;
@@ -27,8 +28,8 @@ export interface ServiceWorkerWorkerData {
     channel?: NodeMessageChannel;
 }
 
-export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData): Promise<DurableServiceWorkerRegistration> {
-    const registration = await getDurableServiceWorkerRegistration(data.serviceWorkerId, {
+export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, internalBucket = getInternalStorageBucket()): Promise<DurableServiceWorkerRegistration> {
+    const registration = await getDurableServiceWorkerRegistration(internalBucket, data.serviceWorkerId, {
         isCurrentGlobalScope: true
     });
     const { protocol, origin } = new URL(registration.durable.url);
@@ -91,7 +92,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData): 
     return registration;
 
     async function setRegistrationStatus(status: DurableServiceWorkerRegistrationState) {
-        const next = await setServiceWorkerRegistrationState(registration.durable.serviceWorkerId, status);
+        const next = await setServiceWorkerRegistrationState(internalBucket, registration.durable.serviceWorkerId, status);
         // TODO change to an event
         await registration.update();
         return dispatchRegistrationUpdate(next);
@@ -99,7 +100,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData): 
 
     async function dispatchRegistrationUpdate(update?: DurableServiceWorkerRegistrationData) {
         await dispatchDurableServiceWorkerRegistrationUpdate(
-            update ?? await getDurableServiceWorkerRegistrationData(registration.durable.serviceWorkerId),
+            update ?? await getDurableServiceWorkerRegistrationData(internalBucket, registration.durable.serviceWorkerId),
             {
                 virtual: true
             }

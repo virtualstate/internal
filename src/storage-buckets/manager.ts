@@ -28,7 +28,9 @@ export class DurableStorageBucket implements StorageBucket {
 
     private options: DurableStorageBucketOptions;
 
+
     constructor(options: DurableStorageBucketOptions) {
+        this.name = options.name;
         this.options = options;
         const internalBucket = getInternalStorageBucket(options.name);
 

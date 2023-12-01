@@ -7,6 +7,7 @@ import {DurableSyncManager, sync} from "../../sync";
 import {addEventListener} from "../../events/schedule/schedule";
 import {dispatchEvent} from "../../events";
 import {DurablePeriodicSyncManager} from "../../periodic-sync";
+import {getInternalStorageBucket, InternalBucket} from "../../storage-buckets/internal";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -23,21 +24,21 @@ export interface DurableServiceWorkerRegistrationData {
 
 const STORE_NAME = "serviceWorker";
 
-function getServiceWorkerRegistrationStore() {
-    return getKeyValueStore<DurableServiceWorkerRegistrationData>(STORE_NAME, {
+function getServiceWorkerRegistrationStore(internalBucket: InternalBucket) {
+    return internalBucket.getKeyValueStore<DurableServiceWorkerRegistrationData>(STORE_NAME, {
         counter: false
     })
 }
 
-export async function getServiceWorkerRegistrationState(serviceWorkerId: string) {
-    const store = getServiceWorkerRegistrationStore();
+export async function getServiceWorkerRegistrationState(internalBucket: InternalBucket, serviceWorkerId: string) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
     const existing = await store.get(serviceWorkerId);
     ok(existing, "Expected to find registered serviceWorkerId");
     return existing.registrationState;
 }
 
-export async function setServiceWorkerRegistrationState(serviceWorkerId: string, registrationState: DurableServiceWorkerRegistrationState) {
-    const store = getServiceWorkerRegistrationStore();
+export async function setServiceWorkerRegistrationState(internalBucket: InternalBucket, serviceWorkerId: string, registrationState: DurableServiceWorkerRegistrationState) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
     const existing = await store.get(serviceWorkerId);
     ok(existing, "Expected to find registered serviceWorkerId");
     const next: DurableServiceWorkerRegistrationData = {
@@ -49,20 +50,20 @@ export async function setServiceWorkerRegistrationState(serviceWorkerId: string,
     return next;
 }
 
-export async function deregisterServiceWorker(serviceWorkerId: string) {
-    const store = getServiceWorkerRegistrationStore();
+export async function deregisterServiceWorker(internalBucket: InternalBucket, serviceWorkerId: string) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
     await store.delete(serviceWorkerId);
 }
 
-export async function getDurableServiceWorkerRegistrationData(serviceWorkerId: string, options?: DurableServiceWorkerRegistrationOptions) {
-    const store = getServiceWorkerRegistrationStore();
+export async function getDurableServiceWorkerRegistrationData(internalBucket: InternalBucket, serviceWorkerId: string, options?: DurableServiceWorkerRegistrationOptions) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
     const registration = await store.get(serviceWorkerId);
     ok(registration, "Service worker not registered");
     return registration;
 }
 
-export async function getDurableServiceWorkerRegistration(serviceWorkerId: string, options?: DurableServiceWorkerRegistrationOptions) {
-    const registration = await getDurableServiceWorkerRegistrationData(serviceWorkerId);
+export async function getDurableServiceWorkerRegistration(internalBucket: InternalBucket, serviceWorkerId: string, options?: DurableServiceWorkerRegistrationOptions) {
+    const registration = await getDurableServiceWorkerRegistrationData(internalBucket, serviceWorkerId);
     return new DurableServiceWorkerRegistration(registration, options);
 }
 
@@ -105,6 +106,7 @@ export class DurableServiceWorker {
 
 export interface DurableServiceWorkerRegistrationOptions {
     isCurrentGlobalScope?: boolean
+    internalBucket?: InternalBucket;
 }
 
 const DURABLE_SERVICE_WORKER_REGISTRATION_UPDATE = "serviceWorker:registration:update" as const;
@@ -146,13 +148,15 @@ export class DurableServiceWorkerRegistration {
     public readonly isCurrentGlobalScope: boolean;
 
     private unregisterListener;
+    private readonly internalBucket: InternalBucket;
 
-    constructor(data: DurableServiceWorkerRegistrationData, { isCurrentGlobalScope }: DurableServiceWorkerRegistrationOptions = {}) {
+    constructor(data: DurableServiceWorkerRegistrationData, { isCurrentGlobalScope, internalBucket = getInternalStorageBucket() }: DurableServiceWorkerRegistrationOptions = {}) {
         this.isCurrentGlobalScope = !!isCurrentGlobalScope;
         this.#onDurableData(data);
         if (this.isCurrentGlobalScope) {
             this.unregisterListener = addEventListener(DURABLE_SERVICE_WORKER_REGISTRATION_UPDATE, this.#onDurableDataEvent);
         }
+        this.internalBucket = internalBucket;
         this.sync = new DurableSyncManager();
         this.periodicSync = new DurablePeriodicSyncManager();
     }
@@ -190,7 +194,7 @@ export class DurableServiceWorkerRegistration {
     async unregister() {
         this.unregisterListener?.();
         this.unregisterListener = undefined;
-        await deregisterServiceWorker(this.durable.serviceWorkerId);
+        await deregisterServiceWorker(this.internalBucket, this.durable.serviceWorkerId);
     }
 
     async update(): Promise<void>
@@ -199,7 +203,7 @@ export class DurableServiceWorkerRegistration {
         // TODO this shouldn't be the thing updating this state...
         // Just happens to be a good place for it, but we will also be changing this _after_ we do the normal update
         // operation if it can be done
-        const data = await getDurableServiceWorkerRegistrationData(this.durable.serviceWorkerId);
+        const data = await getDurableServiceWorkerRegistrationData(this.internalBucket, this.durable.serviceWorkerId);
         this.#onDurableData(data);
     }
 
@@ -224,12 +228,22 @@ function getServiceWorkerId(url: string) {
     return serviceWorkerIdHash.digest().toString("hex");
 }
 
+export interface DurableServiceWorkerContainerOptions {
+    internalBucket?: InternalBucket
+}
+
 export class DurableServiceWorkerContainer {
+
+    private internalBucket: InternalBucket;
+
+    constructor({ internalBucket = getInternalStorageBucket() }: DurableServiceWorkerContainerOptions = {}) {
+        this.internalBucket = internalBucket;
+    }
 
     async register(url: string, options?: RegistrationOptions) {
         const instance = new URL(url, getServiceWorkerUrl());
         ok(instance.protocol === "file:", "Only file service workers supported at this time");
-        const store = getServiceWorkerRegistrationStore();
+        const store = getServiceWorkerRegistrationStore(this.internalBucket);
         const serviceWorkerId = getServiceWorkerId(instance.toString());
         const existing = await store.get(serviceWorkerId);
         if (existing) {
@@ -257,19 +271,19 @@ export class DurableServiceWorkerContainer {
     async getRegistration(clientUrl?: string) {
         ok(clientUrl, "Default client url not supported, please provide a client url to get");
         const serviceWorkerId = getServiceWorkerId(clientUrl);
-        return getDurableServiceWorkerRegistration(serviceWorkerId);
+        return getDurableServiceWorkerRegistration(this.internalBucket, serviceWorkerId);
     }
 
     async getRegistrations() {
-        const store = getServiceWorkerRegistrationStore();
+        const store = getServiceWorkerRegistrationStore(this.internalBucket);
         const serviceWorkerIds = await store.keys();
         return await Promise.all(
-            serviceWorkerIds.map(serviceWorkerId => getDurableServiceWorkerRegistration(serviceWorkerId))
+            serviceWorkerIds.map(serviceWorkerId => getDurableServiceWorkerRegistration(this.internalBucket, serviceWorkerId))
         );
     }
 
     [Symbol.asyncIterator]() {
-        const store = getServiceWorkerRegistrationStore();
+        const store = getServiceWorkerRegistrationStore(this.internalBucket);
         return store[Symbol.asyncIterator]();
     }
 }
