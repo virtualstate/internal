@@ -1,6 +1,6 @@
 import {StorageBucket, StorageBucketManager, StorageBucketOptions} from "./types";
 import {Promise} from "@virtualstate/promise";
-import {getInternalStorageBucket} from "./internal";
+import {getInternalStorageBucket, listInternalStorageBucketNames} from "./internal";
 import {DurableCacheStorage} from "../fetch";
 import {getOrigin} from "../listen";
 import {getConfig} from "../config";
@@ -83,7 +83,10 @@ export class DurableStorageBucketManager implements StorageBucketManager {
     }
 
     async keys(): Promise<string[]> {
-        return [];
+        return [...new Set([
+            ...this.buckets.keys(),
+            ...await listInternalStorageBucketNames()
+        ])];
     }
 
     async open(name: string, options?: StorageBucketOptions): Promise<StorageBucket> {

@@ -6,6 +6,14 @@ export interface InternalBucket {
     delete(): Promise<void>
 }
 
+export async function listInternalStorageBucketNames() {
+    const keys = await listKeyValueStoreIndex();
+    const buckets = keys
+        .filter(key => key.startsWith("bucket:"))
+        .map(key => key.split(":")[1]);
+    return ["default", ...new Set(buckets)];
+}
+
 export function getInternalStorageBucket(bucket: string = "default"): InternalBucket {
     const isDefault = bucket === "default";
     const prefix = isDefault ? "" : `bucket:${bucket}:`
