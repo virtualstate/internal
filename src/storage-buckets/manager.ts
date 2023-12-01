@@ -100,3 +100,5 @@ export class DurableStorageBucketManager implements StorageBucketManager {
     }
 
 }
+
+export const storageBuckets = new DurableStorageBucketManager();
