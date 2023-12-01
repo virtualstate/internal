@@ -1,6 +1,6 @@
 import {dispatcher, DispatchEventFn} from "../events/schedule/schedule";
 import {isLike, isSignalled, ok} from "../is";
-import {createWaitUntil} from "../fetch";
+import {createWaitUntil, WaitUntil} from "../fetch";
 import {DurableEventData} from "../data";
 import {
     deregisterSyncTag,
@@ -12,6 +12,10 @@ import {
 export interface SyncDurableEventData extends DurableEventData {
     tag: string;
     lastChance?: boolean;
+}
+
+export interface SyncEvent extends SyncDurableEventData, WaitUntil {
+    signal: AbortSignal
 }
 
 export function isSyncDurableEventData(event: unknown): event is SyncDurableEventData {

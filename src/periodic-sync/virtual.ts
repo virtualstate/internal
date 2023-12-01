@@ -4,9 +4,10 @@ import {DurableEventData, DurableEventSchedule, getDurableEvent, setDurableEvent
 import {isMatchingObjects} from "../is";
 import {getPeriodicSyncSchedule} from "./schedule";
 import {isScheduleRepeating} from "../events/schedule/update";
+import {DurablePeriodicSyncManager} from "./manager";
 
-async function * generatePeriodicSyncVirtualEvents() {
-    const schedules = await getPeriodicSyncSchedule();
+async function * generatePeriodicSyncVirtualEvents(manager?: DurablePeriodicSyncManager) {
+    const schedules = await getPeriodicSyncSchedule(manager);
     const type = "periodicsync"
     const existingTags = await listDurableEventIds({
         type

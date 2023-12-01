@@ -31,6 +31,10 @@ export interface WaitUntil {
     waitUntil(promise: Promise<void | unknown>): void
 }
 
+export interface ExtendableEvent extends WaitUntil, DurableEventData {
+
+}
+
 interface InternalWaitUntil extends WaitUntil {
     wait(): Promise<void>;
 }

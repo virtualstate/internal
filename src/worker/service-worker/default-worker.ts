@@ -1,12 +1,9 @@
-import { DurableServiceWorkerScope } from "./types";
+import "./dispatchers";
 import { Push } from "@virtualstate/promise";
 import {WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
 import {parentPort, workerData} from "node:worker_threads";
 import {onServiceWorkerWorkerData, ServiceWorkerWorkerData} from "./worker";
 import { ok } from "../../is";
-import {dispatchEvent} from "../../events";
-import {DurableEventData} from "../../data";
-import {createRespondWith, DurableFetchEventData, isDurableFetchEventData} from "../../fetch";
 import {dispatchWorkerEvent} from "./dispatch";
 
 console.log("Default worker!");

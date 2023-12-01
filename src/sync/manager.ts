@@ -51,6 +51,7 @@ export async function deregisterSyncTag(tag: string) {
 }
 
 export class DurableSyncManager {
+
     async register(tag: string) {
         const store = getSyncTagStore();
         const existing = await store.get(tag);

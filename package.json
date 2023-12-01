@@ -198,7 +198,7 @@
     "@virtualstate/impack": "^1.0.0-alpha.8",
     "@virtualstate/kdl": "^1.0.1-alpha.29",
     "@virtualstate/memo": "^1.8.0",
-    "@virtualstate/navigation": "^1.0.1-alpha.196",
+    "@virtualstate/navigation": "^1.0.1-alpha.199",
     "@virtualstate/x": "^2.46.0",
     "c8": "^7.10.0",
     "chance": "^1.1.11",

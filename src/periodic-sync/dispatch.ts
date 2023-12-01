@@ -2,10 +2,15 @@ import {dispatcher} from "../events/schedule/schedule";
 import {isLike, ok} from "../is";
 import {dispatchSyncEvent, SyncDurableEventData} from "../sync/dispatch";
 import {getPeriodicSyncTagRegistrationState, setPeriodicSyncTagRegistrationState} from "./manager";
+import {WaitUntil} from "../fetch";
 
 export interface PeriodicSyncDurableEventData extends SyncDurableEventData {
     tag: string;
     lastChance?: boolean;
+}
+
+export interface PeriodicSyncEvent extends PeriodicSyncDurableEventData, WaitUntil {
+    signal: AbortSignal
 }
 
 export function isPeriodicSyncDurableEventData(event: unknown): event is PeriodicSyncDurableEventData {

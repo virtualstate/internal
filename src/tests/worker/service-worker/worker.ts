@@ -5,6 +5,14 @@ declare var self: DurableServiceWorkerScope;
 
 console.log("in test service worker");
 
+self.addEventListener("install", event => {
+    event.waitUntil(Promise.resolve())
+});
+
+self.addEventListener("activate", event => {
+    event.waitUntil(Promise.resolve())
+})
+
 self.addEventListener("fetch", event => {
     event.respondWith(onFetchEvent(event));
 });

@@ -3,9 +3,10 @@ import {virtual} from "../../events/virtual/virtual";
 import {isLike, ok} from "../../is";
 import {createHash} from "node:crypto";
 import {index} from "../../content-index";
-import {sync} from "../../sync";
+import {DurableSyncManager, sync} from "../../sync";
 import {addEventListener} from "../../events/schedule/schedule";
 import {dispatchEvent} from "../../events";
+import {DurablePeriodicSyncManager} from "../../periodic-sync";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -138,19 +139,26 @@ export class DurableServiceWorkerRegistration {
     waiting?: DurableServiceWorker;
 
     index = index;
-    sync = sync;
+    sync: DurableSyncManager;
+    periodicSync: DurablePeriodicSyncManager;
 
     public durable: DurableServiceWorkerRegistrationData;
     public readonly isCurrentGlobalScope: boolean;
 
     private unregisterListener;
 
-    constructor(data: DurableServiceWorkerRegistrationData,{ isCurrentGlobalScope }: DurableServiceWorkerRegistrationOptions = {}) {
+    constructor(data: DurableServiceWorkerRegistrationData, { isCurrentGlobalScope }: DurableServiceWorkerRegistrationOptions = {}) {
         this.isCurrentGlobalScope = !!isCurrentGlobalScope;
         this.#onDurableData(data);
         if (this.isCurrentGlobalScope) {
             this.unregisterListener = addEventListener(DURABLE_SERVICE_WORKER_REGISTRATION_UPDATE, this.#onDurableDataEvent);
         }
+        this.sync = new DurableSyncManager({
+            serviceWorkerId: data.serviceWorkerId
+        });
+        this.periodicSync = new DurablePeriodicSyncManager({
+            serviceWorkerId: data.serviceWorkerId
+        });
     }
 
     #onDurableDataEvent = (event: DurableEvent) => {

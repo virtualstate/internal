@@ -203,7 +203,7 @@ dispatchEvent({
 Use this to have the event be dispatched immediately
 
 ```javascript
-await dispatchEvent({
+dispatchEvent({
     type: "bingpop",
     schedule: {
         immediate: true
@@ -216,7 +216,7 @@ await dispatchEvent({
 Use this to have the event be dispatched after a period of time
 
 ```javascript
-await dispatchEvent({
+dispatchEvent({
     type: "bingpop",
     schedule: {
         delay: 1000
@@ -225,7 +225,7 @@ await dispatchEvent({
 ```
 
 ```javascript
-await dispatchEvent({
+dispatchEvent({
     type: "bingpop",
     schedule: {
         delay: "1h"
@@ -238,7 +238,7 @@ await dispatchEvent({
 Use this to have the event be dispatched according to a [cron schedule](https://crontab.guru/)
 
 ```javascript
-await dispatchEvent({
+dispatchEvent({
     type: "bingpop",
     schedule: {
         // Triggers at 5am each day

@@ -1,11 +1,11 @@
 import {SyncDurableEventData} from "./dispatch";
 import {virtual} from "../events/virtual/virtual";
-import {getSyncTagStore} from "./manager";
+import {DurableSyncManager, getSyncTagStore} from "./manager";
 
 
-export async function * generateVirtualSyncEvents(): AsyncIterable<SyncDurableEventData> {
+export async function * generateVirtualSyncEvents(manager?: DurableSyncManager): AsyncIterable<SyncDurableEventData> {
     const store = getSyncTagStore();
-    for await (const { tag, lastChance } of store) {
+    for await (const { tag, lastChance } of manager) {
         yield {
             // Utilise a durableEventId so that a lock is created per tag
             durableEventId: `${store.name}:${tag}`,
