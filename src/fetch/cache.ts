@@ -13,6 +13,7 @@ import {fromDurableRequest, fromDurableResponse, fromRequestResponse} from "../d
 import {Expiring} from "../data/expiring";
 import {join} from "node:path";
 import {createHash} from "crypto";
+import {getInternalStorageBucket, InternalBucket} from "../storage-buckets/internal";
 
 export interface DurableCacheStorageConfig {
     getDurableCacheStorageOrigin?(): string
@@ -373,8 +374,8 @@ interface DurableURLReference extends Expiring {
     url: string;
 }
 
-function getDurableCacheReferenceStore() {
-    return getKeyValueStore<DurableCacheReference>(CACHE_REFERENCE_STORE_NAME, {
+function getDurableCacheReferenceStore(internalBucket: InternalBucket) {
+    return internalBucket.getKeyValueStore<DurableCacheReference>(CACHE_REFERENCE_STORE_NAME, {
         counter: false
     });
 }
@@ -427,17 +428,19 @@ async function * matchDurableRequests(cacheName: string, requestQuery?: RequestQ
 
 export interface DurableCacheStorageOptions {
     url(): string;
+    internalBucket?: InternalBucket;
 }
 
 export class DurableCacheStorage implements CacheStorage {
 
-    store: KeyValueStore<DurableCacheReference>;
-    caches: Map<string, DurableCache>;
-    url: () => string;
+    private readonly caches: Map<string, DurableCache>;
+    private readonly url: () => string;
+    private readonly internalBucket: InternalBucket;
 
     constructor(options: DurableCacheStorageOptions) {
         this.url = options.url
         this.caches = new Map();
+        this.internalBucket = options.internalBucket ?? getInternalStorageBucket();
     }
 
     async open(cacheName: string): Promise<DurableCache> {
@@ -445,7 +448,7 @@ export class DurableCacheStorage implements CacheStorage {
         if (existing) {
             return existing;
         }
-        const store = getDurableCacheReferenceStore();
+        const store = getDurableCacheReferenceStore(this.internalBucket);
         const existingReference = await store.get(cacheName);
         const lastOpenedAt = new Date().toISOString();
         const reference: DurableCacheReference = {
@@ -466,12 +469,12 @@ export class DurableCacheStorage implements CacheStorage {
         if (this.caches.has(cacheName)) {
             return true;
         }
-        const store = getDurableCacheReferenceStore();
+        const store = getDurableCacheReferenceStore(this.internalBucket);
         return store.has(cacheName);
     }
 
     async keys(): Promise<string[]> {
-        const store = getDurableCacheReferenceStore();
+        const store = getDurableCacheReferenceStore(this.internalBucket);
         return await store.keys();
     }
 
@@ -480,7 +483,7 @@ export class DurableCacheStorage implements CacheStorage {
             return false;
         }
         await deleteDurableRequests(cacheName, undefined, undefined, this.url);
-        const store = getDurableCacheReferenceStore();
+        const store = getDurableCacheReferenceStore(this.internalBucket);
         await store.delete(cacheName);
         this.caches.delete(cacheName);
         return true;

@@ -14,6 +14,7 @@ import type {FastifyConfig} from "../listen";
 import type {WorkerPoolConfig} from "../worker/pool";
 import type {PeriodicSyncScheduleConfig} from "../periodic-sync/schedule";
 import type {EventScheduleConfig} from "../events/schedule/update";
+import {DurableStorageBucketConfig} from "../storage-buckets/manager";
 
 export interface LogisticsConfig {
 
@@ -32,6 +33,7 @@ export interface Config extends
     ScheduledConfig,
     VirtualEventConfig,
     DurableCacheStorageConfig,
+    DurableStorageBucketConfig,
     FetchEventConfig,
     ContentIndexConfig,
     HappeningTreeConfig,

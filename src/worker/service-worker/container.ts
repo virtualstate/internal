@@ -153,12 +153,8 @@ export class DurableServiceWorkerRegistration {
         if (this.isCurrentGlobalScope) {
             this.unregisterListener = addEventListener(DURABLE_SERVICE_WORKER_REGISTRATION_UPDATE, this.#onDurableDataEvent);
         }
-        this.sync = new DurableSyncManager({
-            serviceWorkerId: data.serviceWorkerId
-        });
-        this.periodicSync = new DurablePeriodicSyncManager({
-            serviceWorkerId: data.serviceWorkerId
-        });
+        this.sync = new DurableSyncManager();
+        this.periodicSync = new DurablePeriodicSyncManager();
     }
 
     #onDurableDataEvent = (event: DurableEvent) => {
