@@ -15,7 +15,6 @@ import type {WorkerPoolConfig} from "../worker/pool";
 import type {PeriodicSyncScheduleConfig} from "../periodic-sync/schedule";
 import type {EventScheduleConfig} from "../events/schedule/update";
 import type {DurableStorageBucketConfig} from "../storage-buckets/manager";
-import type {ServiceWorkerRouterConfig} from "../worker/service-worker/router";
 
 export interface LogisticsConfig {
 
@@ -42,8 +41,7 @@ export interface Config extends
     FastifyConfig,
     WorkerPoolConfig,
     PeriodicSyncScheduleConfig,
-    EventScheduleConfig,
-    ServiceWorkerRouterConfig {
+    EventScheduleConfig {
     name: string;
     version: string;
     root: string;

@@ -118,11 +118,11 @@ export function listRoutes(serviceWorkerId = getServiceWorkerId()) {
     return store.values();
 }
 
-export async function createRouter(): Promise<typeof fetch> {
-    const serviceWorkers = await listServiceWorkers();
+export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<typeof fetch> {
+    const resolveServiceWorkers = serviceWorkers ?? await listServiceWorkers();
     const routes = Object.fromEntries(
         await Promise.all(
-            serviceWorkers.map(
+            resolveServiceWorkers.map(
                 async ({ durable: { serviceWorkerId }}) => {
                     return [
                         serviceWorkerId,
@@ -134,7 +134,7 @@ export async function createRouter(): Promise<typeof fetch> {
     );
 
     const fetchers = Object.fromEntries(
-        serviceWorkers.map(
+        resolveServiceWorkers.map(
             serviceWorker => [
                 serviceWorker.durable.serviceWorkerId,
                 createServiceWorkerFetch(serviceWorker)

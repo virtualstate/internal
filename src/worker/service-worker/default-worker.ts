@@ -1,15 +1,11 @@
 import "./dispatchers";
-import {Promise, Push} from "@virtualstate/promise";
-import {WORKER_ADD_CONTEXT, WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
+import {Push} from "@virtualstate/promise";
+import {WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
 import {parentPort, workerData} from "node:worker_threads";
 import {onServiceWorkerWorkerData, ServiceWorkerWorkerData} from "./worker";
 import { ok } from "../../is";
 import {dispatchWorkerEvent} from "./dispatch";
-import {getConfig, withConfig} from "../../config";
-import {dispatchEvent} from "../../events";
-import {DurableEventData} from "../../data";
 import {DurableServiceWorkerRegistration} from "./container";
-import {AddRoutesOptions} from "./router";
 
 console.log("Default worker!");
 
@@ -67,32 +63,18 @@ try {
 
     workerData.postMessage(WORKER_TERMINATE);
 
-    async function addServiceWorkerRoutes(rules: AddRoutesOptions) {
-        const array = Array.isArray(rules) ? rules : [rules];
-    }
-
     async function onServiceWorkerMessage(message: ServiceWorkerWorkerData) {
         const { serviceWorkerId } = message;
         ok(serviceWorkerId);
 
-        await withConfig({
-            addServiceWorkerRoutes,
-            dispatchEvent(event: DurableEventData) {
-                return dispatchEvent({
-                    ...event,
-                    serviceWorkerId
-                })
+        if (!registration) {
+            registration = await onServiceWorkerWorkerData(message);
+        } else {
+            ok(message.serviceWorkerId === registration.durable.serviceWorkerId);
+            if (message.event) {
+                await dispatchWorkerEvent(message.event, message);
             }
-        }, async () => {
-            if (!registration) {
-                registration = await onServiceWorkerWorkerData(message);
-            } else {
-                ok(message.serviceWorkerId === registration.durable.serviceWorkerId);
-                if (message.event) {
-                    await dispatchWorkerEvent(message.event, message);
-                }
-            }
-        })
+        }
     }
 
 } catch (error) {

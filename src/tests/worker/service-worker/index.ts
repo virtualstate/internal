@@ -9,6 +9,7 @@ import {
     registerServiceWorkerFetch
 } from "../../../worker/service-worker/execute-fetch";
 import {fileURLToPath} from "node:url";
+import {createRouter, listRoutes} from "../../../worker/service-worker/router";
 
 export {};
 
@@ -75,5 +76,23 @@ async function waitForServiceWorker(registration: DurableServiceWorkerRegistrati
         console.log(await response.text());
     }
 
+
+}
+
+{
+    const registration = await serviceWorker.register(worker);
+
+    const routes = await listRoutes(registration.durable.serviceWorkerId);
+
+    ok(routes.length);
+
+    const fetch = await createRouter([
+        registration
+    ]);
+
+    const response = await fetch("https://example.com");
+
+    console.log(response.status, routes);
+    ok(response.ok);
 
 }
