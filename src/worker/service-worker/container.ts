@@ -1,5 +1,4 @@
-import {DurableEvent, DurableEventData, getKeyValueStore} from "../../data";
-import {virtual} from "../../events/virtual/virtual";
+import {DurableEvent, DurableEventData} from "../../data";
 import {isLike, ok} from "../../is";
 import {createHash} from "node:crypto";
 import {index} from "../../content-index";
@@ -24,10 +23,23 @@ export interface DurableServiceWorkerRegistrationData {
 
 const STORE_NAME = "serviceWorker";
 
-function getServiceWorkerRegistrationStore(internalBucket: InternalBucket) {
+function getServiceWorkerRegistrationStore(internalBucket: InternalBucket = getInternalStorageBucket()) {
     return internalBucket.getKeyValueStore<DurableServiceWorkerRegistrationData>(STORE_NAME, {
         counter: false
     })
+}
+
+export function listServiceWorkerIds(internalBucket: InternalBucket = getInternalStorageBucket()) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
+    return store.keys();
+}
+
+export async function listServiceWorkers(internalBucket: InternalBucket = getInternalStorageBucket()) {
+    const store = getServiceWorkerRegistrationStore(internalBucket);
+    const values = await store.values();
+    return values.map(value => new DurableServiceWorkerRegistration(value, {
+        internalBucket
+    }));
 }
 
 export async function getServiceWorkerRegistrationState(internalBucket: InternalBucket, serviceWorkerId: string) {

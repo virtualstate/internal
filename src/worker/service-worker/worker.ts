@@ -26,6 +26,7 @@ export interface ServiceWorkerWorkerData {
     event?: DurableEventData;
     port?: NodeMessagePort;
     channel?: NodeMessageChannel;
+    context?: Record<string, unknown[]>;
 }
 
 export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, internalBucket = getInternalStorageBucket()): Promise<DurableServiceWorkerRegistration> {

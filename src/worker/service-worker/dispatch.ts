@@ -7,7 +7,6 @@ import {ServiceWorkerWorkerData} from "./worker";
 import {createRespondWith, DurableFetchEventData, isDurableFetchEventData} from "../../fetch";
 import {dispatchEvent} from "../../events";
 import {ok} from "../../is";
-import {parentPort} from "node:worker_threads";
 
 export interface FetchResponseMessage {
     type: "fetch:response";

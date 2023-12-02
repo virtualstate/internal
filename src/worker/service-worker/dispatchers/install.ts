@@ -1,8 +1,11 @@
 import {dispatcher} from "../../../events/schedule/schedule";
 import {createWaitUntil, ExtendableEvent} from "../../../fetch";
+import {addRoutes, AddRoutesOptions} from "../router";
+import {skipWaiting} from "../skip-waiting";
 
 export interface InstallEvent extends ExtendableEvent {
     skipWaiting(): void;
+    addRoutes(rules: AddRoutesOptions): Promise<void> | unknown;
 }
 
 export const removeInstallDispatcher = dispatcher("install", async (event, dispatch) => {
@@ -13,9 +16,8 @@ export const removeInstallDispatcher = dispatcher("install", async (event, dispa
     await dispatch({
         ...event,
         waitUntil,
-        skipWaiting() {
-            // TODO noop
-        }
+        skipWaiting,
+        addRoutes
     })
     await wait();
 });

@@ -6,6 +6,22 @@ declare var self: DurableServiceWorkerScope;
 console.log("in test service worker");
 
 self.addEventListener("install", event => {
+    event.addRoutes([
+        {
+            condition: {
+                and: [
+                    {
+                        requestMethod: "GET"
+                    },
+                    {
+                        urlPattern: "https://*/*"
+                    }
+                ]
+            },
+            source: "network"
+        }
+    ])
+
     event.waitUntil(Promise.resolve())
 });
 

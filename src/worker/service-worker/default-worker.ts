@@ -1,10 +1,15 @@
 import "./dispatchers";
-import { Push } from "@virtualstate/promise";
-import {WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
+import {Promise, Push} from "@virtualstate/promise";
+import {WORKER_ADD_CONTEXT, WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
 import {parentPort, workerData} from "node:worker_threads";
 import {onServiceWorkerWorkerData, ServiceWorkerWorkerData} from "./worker";
 import { ok } from "../../is";
 import {dispatchWorkerEvent} from "./dispatch";
+import {getConfig, withConfig} from "../../config";
+import {dispatchEvent} from "../../events";
+import {DurableEventData} from "../../data";
+import {DurableServiceWorkerRegistration} from "./container";
+import {AddRoutesOptions} from "./router";
 
 console.log("Default worker!");
 
@@ -44,7 +49,7 @@ try {
         console.log("Initiated inside worker", initiatedCount++);
     }, 500)
 
-    let registration;
+    let registration: DurableServiceWorkerRegistration;
 
     console.log("Waiting for messages inside worker");
     for await (const message of messages) {
@@ -54,16 +59,7 @@ try {
         }
 
         ok<ServiceWorkerWorkerData>(message);
-        ok(message.serviceWorkerId);
-
-        if (!registration) {
-            registration = await onServiceWorkerWorkerData(message);
-        } else {
-            ok(message.serviceWorkerId === registration.durable.serviceWorkerId);
-            if (message.event) {
-                await dispatchWorkerEvent(message.event, message);
-            }
-        }
+        await onServiceWorkerMessage(message);
 
         console.log("Breaking worker!");
         workerData.postMessage(WORKER_BREAK);
@@ -71,7 +67,33 @@ try {
 
     workerData.postMessage(WORKER_TERMINATE);
 
+    async function addServiceWorkerRoutes(rules: AddRoutesOptions) {
+        const array = Array.isArray(rules) ? rules : [rules];
+    }
 
+    async function onServiceWorkerMessage(message: ServiceWorkerWorkerData) {
+        const { serviceWorkerId } = message;
+        ok(serviceWorkerId);
+
+        await withConfig({
+            addServiceWorkerRoutes,
+            dispatchEvent(event: DurableEventData) {
+                return dispatchEvent({
+                    ...event,
+                    serviceWorkerId
+                })
+            }
+        }, async () => {
+            if (!registration) {
+                registration = await onServiceWorkerWorkerData(message);
+            } else {
+                ok(message.serviceWorkerId === registration.durable.serviceWorkerId);
+                if (message.event) {
+                    await dispatchWorkerEvent(message.event, message);
+                }
+            }
+        })
+    }
 
 } catch (error) {
     console.error("Error in worker", error)
