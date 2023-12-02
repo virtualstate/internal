@@ -1,5 +1,5 @@
 import {URLPattern} from "urlpattern-polyfill";
-import {RequestMethod} from "@opennetwork/http-representation";
+import {RequestInit, RequestMethod} from "@opennetwork/http-representation";
 import {getConfig} from "../../config";
 import {DurableServiceWorkerScope} from "./types";
 import {getKeyValueStore} from "../../data";
@@ -7,6 +7,7 @@ import {getServiceWorkerId} from "./service-worker-config";
 import {v4} from "uuid";
 import {DurableServiceWorkerRegistration, listServiceWorkerIds, listServiceWorkers} from "./container";
 import {createServiceWorkerFetch} from "./execute-fetch";
+import {ok} from "../../is";
 
 export type RouterSourceEnum = "network" | "cache" | "fetch-event" | "race-network-and-fetch-handler";
 export type RunningStatusEnum = "running" | "stopped";
@@ -120,18 +121,16 @@ export function listRoutes(serviceWorkerId = getServiceWorkerId()) {
 
 export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<typeof fetch> {
     const resolveServiceWorkers = serviceWorkers ?? await listServiceWorkers();
-    const routes = Object.fromEntries(
-        await Promise.all(
-            resolveServiceWorkers.map(
-                async ({ durable: { serviceWorkerId }}) => {
-                    return [
-                        serviceWorkerId,
-                        await listRoutes(serviceWorkerId)
-                    ] as const;
-                }
-            )
+    const serviceWorkerRoutes = await Promise.all(
+        resolveServiceWorkers.map(
+            async ({ durable: { serviceWorkerId }}) => {
+                return [
+                    serviceWorkerId,
+                    await listRoutes(serviceWorkerId)
+                ] as const;
+            }
         )
-    );
+    )
 
     const fetchers = Object.fromEntries(
         resolveServiceWorkers.map(
@@ -142,9 +141,32 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
         )
     )
 
-    return async function (input, init) {
+    function match(input: RequestInfo | URL, init?: RequestInit) {
+        for (const [serviceWorkerId, routes] of serviceWorkerRoutes) {
+            for (const route of routes) {
+                if (isRouteMatch(route, input, init)) {
+                    return {
+                        serviceWorkerId,
+                        route
+                    } as const
+                }
+            }
+        }
+    }
+
+    function isRouteMatch(route: RouterRule, input: RequestInfo | URL, init?: RequestInit) {
         // TODO
-        const [first] = Object.values(fetchers);
-        return first(input, init);
+        return true;
+    }
+
+    return async function (input, init) {
+        const found = match(input, init);
+        if (!found) {
+            throw new Error("FetchError: No match for this router");
+        }
+        const { serviceWorkerId } = found;
+        const fetch = fetchers[serviceWorkerId];
+        ok(fetch, "Expected to find fetcher for service worker, internal state corrupt");
+        return fetch(input, init);
     }
 }
