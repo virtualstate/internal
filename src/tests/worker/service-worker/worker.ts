@@ -1,5 +1,6 @@
 import type {DurableServiceWorkerScope} from "../../../worker/service-worker/types";
 import type {FetchEvent} from "../../../fetch";
+import {URLPattern} from "urlpattern-polyfill";
 
 declare var self: DurableServiceWorkerScope;
 
@@ -14,7 +15,7 @@ self.addEventListener("install", event => {
                         requestMethod: "GET"
                     },
                     {
-                        urlPattern: "https://*/*"
+                        urlPattern: new URLPattern("https://*/*")
                     }
                 ]
             },
