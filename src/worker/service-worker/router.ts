@@ -199,6 +199,14 @@ export async function addRoutes(rules: AddRoutesOptions) {
                             search: value.search,
                             hash: value.hash
                         };
+                    } else if (value instanceof Request) {
+                        // a cache source can define a request to use as a key...
+                        // this isn't the exact same, but it will be used as the key in:
+                        //   cache.put(value.url, response)
+                        //
+                        // This would be different from what a real service worker might do, so
+                        // I will definitely need to find a solution for objects just like URLPattern
+                        return value.url;
                     } else {
                         return value;
                     }
