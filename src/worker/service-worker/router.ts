@@ -471,15 +471,8 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
             }
             if (isRouterSourceType(ruleSource, "cache")) {
                 if (isRouterCacheSource(ruleSource)) {
-                    if (ruleSource.request) {
-                        // TODO, should this match the actual request properties
-                        // or should it only match the exact reference of this request
-                        if (ruleSource.request !== input) {
-                            return undefined;
-                        }
-                    }
                     const cache = await caches.open(ruleSource.cacheName || "default");
-                    return cache.match(cacheKey());
+                    return cache.match(cacheKey(ruleSource.request));
                 } else {
                     const cache = await caches.open("default");
                     return cache.match(cacheKey())
@@ -488,7 +481,14 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
             throw new Error("Unknown source type");
         }
 
-        function cacheKey() {
+        function cacheKey(request?: RequestInfo) {
+            if (request) {
+                if (request instanceof Request) {
+                    return request.clone();
+                } else {
+                    return new Request(request);
+                }
+            }
             if (!init) {
                 return clone();
             } else {
