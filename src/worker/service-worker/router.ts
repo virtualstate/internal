@@ -333,6 +333,23 @@ export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistr
         return true;
     }
 
+    function isRouterTimeConditionMatch(condition: RouterTimeCondition): boolean {
+        // TODO... is this literally meant to be the condition of the current time?
+        //  There is nothing else to compare
+        //  Request.headers.get("date") should be the same current time if it were present...
+        if (condition.timeFrom) {
+            if (Date.now() < condition.timeFrom) {
+                return false;
+            }
+        }
+        if (condition.timeTo) {
+            if (Date.now() > condition.timeTo) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     function isAndConditionMatch(condition: RouterAndCondition): boolean {
         return condition.and.every(isConditionMatch);
     }
@@ -353,6 +370,10 @@ export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistr
 
         if (isRouterRequestCondition(condition)) {
             return isRouterRequestConditionMatch(condition);
+        }
+
+        if (isRouterTimeCondition(condition)) {
+            return isRouterTimeConditionMatch(condition);
         }
 
         if (isRouterAndCondition(condition)) {
