@@ -222,200 +222,200 @@ export function listRoutes(serviceWorkerId = getServiceWorkerId()) {
     return store.values();
 }
 
+export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistration, route: RouterRule, input: RequestInfo | URL, init?: RequestInit) {
+
+    return isConditionsMatch(route.condition);
+
+    function isConditionsMatch(conditions: RouterCondition | RouterCondition[]): boolean {
+        if (Array.isArray(conditions)) {
+            if (!conditions.length) {
+                throw new Error("Expected at least one condition");
+            }
+            for (const condition of conditions) {
+                if (!isConditionMatch(condition)) {
+                    return false;
+                }
+            }
+            return true;
+        } else {
+            return isConditionMatch(conditions);
+        }
+    }
+
+    function isRouterURLPatternConditionMatch(condition: RouterURLPatternCondition): boolean {
+        const url = input instanceof URL ?
+            input :
+            typeof input === "string" ?
+                input :
+                input.url;
+
+        const { urlPattern } = condition;
+
+        if (typeof urlPattern === "string") {
+            // TODO, confirm this is correct
+            // Explainer does mention:
+            //
+            //   For a USVString input, a ServiceWorker script's URL is used as a base URL.
+            //
+            // My current assumption is we are completely comparing the URL and search params here
+            const matchInstance = new URL(url, serviceWorker.durable.url);
+            const patternInstance = new URL(urlPattern, serviceWorker.durable.url);
+            return matchInstance.toString() === patternInstance.toString();
+        } else {
+            if (urlPattern.test) {
+                return urlPattern.test(url, serviceWorker.durable.url);
+            } else {
+                const pattern = new URLPattern(urlPattern);
+                return pattern.test(url, serviceWorker.durable.url);
+            }
+        }
+    }
+
+    function isRouterRequestConditionMatch(condition: RouterRequestCondition): boolean {
+        if (typeof input === "string" || input instanceof URL) {
+            const { method, mode }: RequestInit = init || {}
+            if (isRouterRequestMethodCondition(condition)) {
+                if (method) {
+                    if (method.toUpperCase() !== condition.requestMethod.toUpperCase()) {
+                        return false;
+                    }
+                } else {
+                    if (condition.requestMethod.toUpperCase() !== "GET") {
+                        return false;
+                    }
+                }
+            }
+            if (isRouterRequestModeCondition(condition)) {
+                if (mode) {
+                    if (mode !== condition.requestMode) {
+                        return false;
+                    }
+                } else {
+                    // Assuming that fetch follows creating a new Request object
+                    // From https://developer.mozilla.org/en-US/docs/Web/API/Request/mode
+                    //   For example, when a Request object is created using the Request() constructor, the value of the mode property for that Request is set to cors.
+                    //
+                    // undici uses new Request
+                    //
+                    // https://github.com/nodejs/undici/blob/8535d8c8e3937d73037272ffb411c7b14b036917/lib/fetch/index.js#L136
+                    // https://github.com/nodejs/undici/blob/8535d8c8e3937d73037272ffb411c7b14b036917/lib/fetch/request.js#L100
+                    if (condition.requestMode !== "cors") {
+                        return false;
+                    }
+                }
+            }
+            if (isRouterRequestDestinationCondition(condition)) {
+                // default destination is ''
+                // https://developer.mozilla.org/en-US/docs/Web/API/Request/destination#sect1
+                if (condition.requestDestination !== "") {
+                    return false;
+                }
+            }
+        } else {
+            const { method, mode, destination } = input;
+            if (isRouterRequestMethodCondition(condition)) {
+                if (method.toUpperCase() !== condition.requestMethod.toUpperCase()) {
+                    return false;
+                }
+            }
+            if (isRouterRequestModeCondition(condition)) {
+                if (mode !== condition.requestMode) {
+                    return false;
+                }
+            }
+            if (isRouterRequestDestinationCondition(condition)) {
+                if (destination !== condition.requestDestination) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    function isAndConditionMatch(condition: RouterAndCondition): boolean {
+        return condition.and.every(isConditionMatch);
+    }
+
+    function isOrConditionMatch(condition: RouterOrCondition): boolean {
+        const index = condition.or.findIndex(isNotConditionMatch);
+        return index === -1;
+    }
+
+    function isNotConditionMatch(condition: RouterNotCondition): boolean {
+        return !isConditionsMatch(condition.not);
+    }
+
+    function isConditionMatch(condition: RouterCondition): boolean {
+        if (isRouterURLPatternCondition(condition)) {
+            return isRouterURLPatternConditionMatch(condition);
+        }
+
+        if (isRouterRequestCondition(condition)) {
+            return isRouterRequestConditionMatch(condition);
+        }
+
+        if (isRouterAndCondition(condition)) {
+            return isAndConditionMatch(condition);
+        }
+
+        if (isRouterOrCondition(condition)) {
+            return isOrConditionMatch(condition);
+        }
+
+        if (isRouterNotCondition(condition)) {
+            return isNotConditionMatch(condition);
+        }
+
+        return false;
+    }
+}
+
 export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<typeof fetch> {
     const resolveServiceWorkers = serviceWorkers ?? await listServiceWorkers();
-    const serviceWorkerRoutes = await Promise.all(
-        resolveServiceWorkers.map(
-            async (serviceWorker) => {
-                return [
-                    serviceWorker,
-                    await listRoutes(serviceWorker.durable.serviceWorkerId)
-                ] as const;
-            }
-        )
-    )
+    const serviceWorkerRoutes = new Map<DurableServiceWorkerRegistration, RouterRule[]>();
 
-    const fetchers = Object.fromEntries(
+    const fetchers = new Map(
         resolveServiceWorkers.map(
             serviceWorker => [
-                serviceWorker.durable.serviceWorkerId,
+                serviceWorker,
                 createServiceWorkerFetch(serviceWorker)
             ]
         )
     )
 
-    function match(input: RequestInfo | URL, init?: RequestInit) {
-        for (const [serviceWorker, routes] of serviceWorkerRoutes) {
+    async function listServiceWorkerRoutes(serviceWorker: DurableServiceWorkerRegistration) {
+        const existing = serviceWorkerRoutes.get(serviceWorker);
+        if (existing) {
+            return existing;
+        }
+        const routes = await listRoutes(serviceWorker.durable.serviceWorkerId);
+        serviceWorkerRoutes.set(serviceWorker, routes);
+        return routes;
+    }
+
+    async function match(input: RequestInfo | URL, init?: RequestInit) {
+        for (const serviceWorker of resolveServiceWorkers) {
+            const routes = await listServiceWorkerRoutes(serviceWorker);
             for (const route of routes) {
                 if (isRouteMatchCondition(serviceWorker, route, input, init)) {
                     return {
                         serviceWorker,
                         route
                     } as const
-                } else {
-                    console.log(route, input);
                 }
             }
-        }
-    }
-
-    function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistration, route: RouterRule, input: RequestInfo | URL, init?: RequestInit) {
-
-        return isConditionsMatch(route.condition);
-
-        function isConditionsMatch(conditions: RouterCondition | RouterCondition[]): boolean {
-            if (Array.isArray(conditions)) {
-                if (!conditions.length) {
-                    throw new Error("Expected at least one condition");
-                }
-                for (const condition of conditions) {
-                    if (!isConditionMatch(condition)) {
-                        return false;
-                    }
-                }
-                return true;
-            } else {
-                return isConditionMatch(conditions);
-            }
-        }
-
-        function isRouterURLPatternConditionMatch(condition: RouterURLPatternCondition): boolean {
-            const url = input instanceof URL ?
-                input :
-                typeof input === "string" ?
-                    input :
-                    input.url;
-
-            const { urlPattern } = condition;
-
-            if (typeof urlPattern === "string") {
-                // TODO, confirm this is correct
-                // Explainer does mention:
-                //
-                //   For a USVString input, a ServiceWorker script's URL is used as a base URL.
-                //
-                // My current assumption is we are completely comparing the URL and search params here
-                const matchInstance = new URL(url, serviceWorker.durable.url);
-                const patternInstance = new URL(urlPattern, serviceWorker.durable.url);
-                return matchInstance.toString() === patternInstance.toString();
-            } else {
-                if (urlPattern.test) {
-                    return urlPattern.test(url);
-                } else {
-                    const pattern = new URLPattern(urlPattern);
-                    return pattern.test(url);
-                }
-            }
-        }
-
-        function isRouterRequestConditionMatch(condition: RouterRequestCondition): boolean {
-            if (typeof input === "string" || input instanceof URL) {
-                const { method, mode }: RequestInit = init || {}
-                if (isRouterRequestMethodCondition(condition)) {
-                    if (method) {
-                        if (method.toUpperCase() !== condition.requestMethod.toUpperCase()) {
-                            return false;
-                        }
-                    } else {
-                        if (condition.requestMethod.toUpperCase() !== "GET") {
-                            return false;
-                        }
-                    }
-                }
-                if (isRouterRequestModeCondition(condition)) {
-                    if (mode) {
-                        if (mode !== condition.requestMode) {
-                            return false;
-                        }
-                    } else {
-                        // Assuming that fetch follows creating a new Request object
-                        // From https://developer.mozilla.org/en-US/docs/Web/API/Request/mode
-                        //   For example, when a Request object is created using the Request() constructor, the value of the mode property for that Request is set to cors.
-                        //
-                        // undici uses new Request
-                        //
-                        // https://github.com/nodejs/undici/blob/8535d8c8e3937d73037272ffb411c7b14b036917/lib/fetch/index.js#L136
-                        // https://github.com/nodejs/undici/blob/8535d8c8e3937d73037272ffb411c7b14b036917/lib/fetch/request.js#L100
-                        if (condition.requestMode !== "cors") {
-                            return false;
-                        }
-                    }
-                }
-                if (isRouterRequestDestinationCondition(condition)) {
-                    // default destination is ''
-                    // https://developer.mozilla.org/en-US/docs/Web/API/Request/destination#sect1
-                    if (condition.requestDestination !== "") {
-                        return false;
-                    }
-                }
-            } else {
-                const { method, mode, destination } = input;
-                if (isRouterRequestMethodCondition(condition)) {
-                    if (method !== condition.requestMethod) {
-                        return false;
-                    }
-                }
-                if (isRouterRequestModeCondition(condition)) {
-                    if (mode !== condition.requestMode) {
-                        return false;
-                    }
-                }
-                if (isRouterRequestDestinationCondition(condition)) {
-                    if (destination !== condition.requestDestination) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        function isAndConditionMatch(condition: RouterAndCondition): boolean {
-            return condition.and.every(isConditionMatch);
-        }
-
-        function isOrConditionMatch(condition: RouterOrCondition): boolean {
-            const index = condition.or.findIndex(isNotConditionMatch);
-            return index === -1;
-        }
-
-        function isNotConditionMatch(condition: RouterNotCondition): boolean {
-            return !isConditionsMatch(condition.not);
-        }
-
-        function isConditionMatch(condition: RouterCondition): boolean {
-            if (isRouterURLPatternCondition(condition)) {
-                return isRouterURLPatternConditionMatch(condition);
-            }
-
-            if (isRouterRequestCondition(condition)) {
-                return isRouterRequestConditionMatch(condition);
-            }
-
-            if (isRouterAndCondition(condition)) {
-                return isAndConditionMatch(condition);
-            }
-
-            if (isRouterOrCondition(condition)) {
-                return isOrConditionMatch(condition);
-            }
-
-            if (isRouterNotCondition(condition)) {
-                return isNotConditionMatch(condition);
-            }
-
-            return false;
         }
     }
 
     return async function (input, init) {
-        const found = match(input, init);
+        const found = await match(input, init);
         if (!found) {
             throw new Error("FetchError: No match for this router");
         }
         const { serviceWorker, route } = found;
 
-        const serviceWorkerFetch = fetchers[serviceWorker.durable.serviceWorkerId];
+        const serviceWorkerFetch = fetchers.get(serviceWorker);
         ok(serviceWorkerFetch, "Expected to find fetcher for service worker, internal state corrupt");
 
         return sources(route.source);
@@ -473,9 +473,9 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
             }
             if (isRouterSourceType(ruleSource, "race-network-and-fetch-handler")) {
                 return Promise.race([
-                    fetch(clone(), init),
-                    serviceWorkerFetch(clone(), init)
-                ])
+                    source("network"),
+                    source("fetch-event")
+                ]);
             }
             if (isRouterSourceType(ruleSource, "cache")) {
                 if (isRouterCacheSource(ruleSource)) {

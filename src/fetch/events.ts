@@ -2,6 +2,7 @@ import {DurableEventData, DurableRequest, DurableRequestData} from "../data";
 import {on} from "../events";
 import {isLike, ok} from "../is";
 import {FetchRespondWith} from "./dispatch";
+import {isMainThread} from "node:worker_threads";
 
 export const FETCH = "fetch" as const;
 type ScheduleFetchEventType = typeof FETCH;
@@ -40,11 +41,15 @@ function isFetchEvent(event: unknown): event is FetchEvent {
     )
 }
 
-export const removeFetchScheduledFunction = on(FETCH, async (event) => {
-    ok(isFetchEvent(event));
-    event.respondWith(
-        fetch(
-            event.request
-        )
-    );
-});
+export let removeFetchScheduledFunction = () => {};
+
+if (isMainThread) {
+    removeFetchScheduledFunction = on(FETCH, async (event) => {
+        ok(isFetchEvent(event));
+        event.respondWith(
+            fetch(
+                event.request
+            )
+        );
+    });
+}

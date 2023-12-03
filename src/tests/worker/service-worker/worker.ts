@@ -34,6 +34,7 @@ self.addEventListener("activate", event => {
 })
 
 self.addEventListener("fetch", event => {
+    console.log("In fetch handler!");
     event.respondWith(onFetchEvent(event));
 });
 

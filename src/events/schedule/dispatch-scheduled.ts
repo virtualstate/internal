@@ -91,7 +91,6 @@ export async function dispatchScheduledDurableEvents(options: BackgroundSchedule
             undefined;
         // TODO detect if this event tries to dispatch again
         try {
-            let isMainThread = true;
             if (event.serviceWorkerId) {
                 if (isMainThread) {
                     const { dispatchServiceWorkerEvent } = await import("../../worker/service-worker/execute");

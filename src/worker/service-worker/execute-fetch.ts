@@ -17,7 +17,12 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
         if (input instanceof Request) {
             request = input
         } else if (init?.body) {
-            request = new Request(input, init);
+            request = new Request(
+                typeof input === "string" ?
+                    new URL(input, getOrigin()).toString() :
+                    input,
+                init
+            );
         } else {
             request = {
                 url: new URL(input, getOrigin()).toString(),

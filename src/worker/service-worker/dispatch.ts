@@ -7,6 +7,7 @@ import {ServiceWorkerWorkerData} from "./worker";
 import {createRespondWith, DurableFetchEventData, isDurableFetchEventData} from "../../fetch";
 import {dispatchEvent} from "../../events";
 import {ok} from "../../is";
+import {dispatchScheduledDurableEvents} from "../../events/schedule/dispatch-scheduled";
 
 export interface FetchResponseMessage {
     type: "fetch:response";
@@ -18,8 +19,11 @@ export interface FetchResponseMessage {
 export async function dispatchWorkerEvent(event: DurableEventData, context: ServiceWorkerWorkerData) {
     if (isDurableFetchEventData(event)) {
         return dispatchWorkerFetchEvent(event, context);
+    } else {
+        return dispatchScheduledDurableEvents({
+            event
+        })
     }
-    return dispatchEvent(event);
 }
 
 export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, context: ServiceWorkerWorkerData) {

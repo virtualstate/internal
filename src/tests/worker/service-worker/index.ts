@@ -16,14 +16,7 @@ export {};
 const pathname = fileURLToPath(import.meta.url);
 const worker = join(dirname(pathname), "./worker.js");
 
-async function waitForServiceWorker(registration: DurableServiceWorkerRegistration) {
-    if (registration.active) {
-        return registration.active;
-    }
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await registration.update();
-    return waitForServiceWorker(registration);
-}
+
 
 
 {
@@ -96,3 +89,5 @@ async function waitForServiceWorker(registration: DurableServiceWorkerRegistrati
     ok(response.ok);
 
 }
+
+await import("./routes.test");
