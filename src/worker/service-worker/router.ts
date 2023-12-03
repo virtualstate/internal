@@ -5,6 +5,7 @@ import {v4} from "uuid";
 import {DurableServiceWorkerRegistration, listServiceWorkers} from "./container";
 import {createServiceWorkerFetch} from "./execute-fetch";
 import {ok} from "../../is";
+import {caches} from "../../fetch";
 
 export type RouterSourceEnum = "network" | "cache" | "fetch-event" | "race-network-and-fetch-handler";
 export type RunningStatusEnum = "running" | "stopped";
@@ -21,7 +22,7 @@ export interface RouterNetworkSource extends RouterSource {
 }
 
 export interface RouterCacheSource extends RouterSource {
-    cacheName: string;
+    cacheName?: string;
     request?: Request;
 }
 
@@ -110,6 +111,10 @@ export function isRouterRequestDestinationCondition(condition: RouterCondition):
     return "requestDestination" in condition;
 }
 
+export function isRouterCacheSource(source: RouterRuleSource): source is RouterCacheSource {
+    return isRouterSourceObject(source) && source.type === "cache";
+}
+
 export function isRouterRequestCondition(condition: RouterCondition): condition is RouterRequestCondition {
     return (
         isRouterRequestMethodCondition(condition) ||
@@ -156,6 +161,10 @@ export function isRouterSourceType(source: RouterRuleSource, type: RouterSourceE
             source.type === type
         )
     );
+}
+
+export function isRouterNetworkSource(source: RouterRuleSource): source is RouterNetworkSource {
+    return isRouterSourceObject(source) && source.type === "network";
 }
 
 
@@ -367,35 +376,27 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
         }
 
         function isConditionMatch(condition: RouterCondition): boolean {
-            function match() {
-                if (isRouterURLPatternCondition(condition)) {
-                    return isRouterURLPatternConditionMatch(condition);
-                }
-
-                if (isRouterRequestCondition(condition)) {
-                    return isRouterRequestConditionMatch(condition);
-                }
-
-                if (isRouterAndCondition(condition)) {
-                    return isAndConditionMatch(condition);
-                }
-
-                if (isRouterOrCondition(condition)) {
-                    return isOrConditionMatch(condition);
-                }
-
-                if (isRouterNotCondition(condition)) {
-                    return isNotConditionMatch(condition);
-                }
-
-                return false;
+            if (isRouterURLPatternCondition(condition)) {
+                return isRouterURLPatternConditionMatch(condition);
             }
 
-            const isMatch = match();
+            if (isRouterRequestCondition(condition)) {
+                return isRouterRequestConditionMatch(condition);
+            }
 
-            console.log({ condition, isMatch });
+            if (isRouterAndCondition(condition)) {
+                return isAndConditionMatch(condition);
+            }
 
-            return isMatch;
+            if (isRouterOrCondition(condition)) {
+                return isOrConditionMatch(condition);
+            }
+
+            if (isRouterNotCondition(condition)) {
+                return isNotConditionMatch(condition);
+            }
+
+            return false;
         }
     }
 
@@ -409,7 +410,99 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
         const serviceWorkerFetch = fetchers[serviceWorker.durable.serviceWorkerId];
         ok(serviceWorkerFetch, "Expected to find fetcher for service worker, internal state corrupt");
 
-        // TODO here stack route.source
-        return serviceWorkerFetch(input, init);
+        return sources(route.source);
+
+        async function sources(ruleSource: RouterRuleSource | RouterRuleSource[]) {
+            if (Array.isArray(ruleSource)) {
+                let returningResponse: Response;
+                for (const singleRuleSource of ruleSource) {
+                    try {
+                        const response = await source(singleRuleSource);
+                        // TODO, should response.ok be true here as well
+
+                        // TODO behaviorEnum
+                        // if (returningResponse) {
+                        //     continue;
+                        // }
+                        // if (isRouterSourceObject(singleRuleSource)) {
+                        //     if (singleRuleSource.behaviorEnum === "continue-discarding-latter-results") {
+                        //         returningResponse = returningResponse || response;
+                        //         continue;
+                        //     }
+                        // }
+
+                        if (response) {
+                            return response;
+                        }
+                    } catch {
+                        // Source failed, or could not match
+                    }
+                }
+                if (returningResponse)  {
+                    return returningResponse;
+                }
+                throw new Error("Could not resolve response");
+            } else {
+                return source(ruleSource)
+            }
+        }
+
+        async function source(ruleSource: RouterRuleSource): Promise<Response | undefined> {
+            if (isRouterSourceType(ruleSource, "network")) {
+                const response = await fetch(clone(), init);
+                if (isRouterNetworkSource(ruleSource)) {
+                    if (ruleSource.updatedCacheName) {
+                        if (ruleSource.cacheErrorResponse || response.ok) {
+                            const cache = await caches.open(ruleSource.updatedCacheName);
+                            await cache.put(cacheKey(), response.clone());
+                        }
+                    }
+                }
+                return response;
+            }
+            if (isRouterSourceType(ruleSource, "fetch-event")) {
+                return serviceWorkerFetch(clone(), init);
+            }
+            if (isRouterSourceType(ruleSource, "race-network-and-fetch-handler")) {
+                return Promise.race([
+                    fetch(clone(), init),
+                    serviceWorkerFetch(clone(), init)
+                ])
+            }
+            if (isRouterSourceType(ruleSource, "cache")) {
+                if (isRouterCacheSource(ruleSource)) {
+                    if (ruleSource.request) {
+                        // TODO, should this match the actual request properties
+                        // or should it only match the exact reference of this request
+                        if (ruleSource.request !== input) {
+                            return undefined;
+                        }
+                    }
+                    const cache = await caches.open(ruleSource.cacheName || "default");
+                    return cache.match(cacheKey());
+                } else {
+                    const cache = await caches.open("default");
+                    return cache.match(cacheKey())
+                }
+            }
+            throw new Error("Unknown source type");
+        }
+
+        function cacheKey() {
+            if (!init) {
+                return clone();
+            } else {
+                return new Request(clone(), init);
+            }
+        }
+
+        function clone() {
+            if (input instanceof Request) {
+                return input.clone()
+            } else {
+                return input;
+            }
+        }
+
     }
 }

@@ -19,7 +19,10 @@ self.addEventListener("install", event => {
                     }
                 ]
             },
-            source: "network"
+            source: [
+                "network",
+                "fetch-event"
+            ]
         }
     ])
 
