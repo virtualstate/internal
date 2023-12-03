@@ -1,19 +1,7 @@
 import {FetchEvent} from "../../../fetch";
-import {isRouteMatchCondition, RouterRule} from "../../../worker/service-worker/router";
+import {isRouteMatchCondition, RouterRule, URLPatternInit} from "../../../worker/service-worker/router";
 import {DurableServiceWorkerScope} from "../../../worker/service-worker/types";
 import {URLPattern} from "urlpattern-polyfill";
-
-export interface URLPatternInit {
-    baseURL?: string;
-    username?: string;
-    password?: string;
-    protocol?: string;
-    hostname?: string;
-    port?: string;
-    pathname?: string;
-    search?: string;
-    hash?: string;
-}
 
 declare var self: DurableServiceWorkerScope;
 
@@ -54,14 +42,9 @@ function makeAddRequestMethodRouteAndHandler(requestMethod: RouterRequestMethodL
 
 function addRequestMethodRouteAndHandler(
     requestMethod: string,
-    pathnameOrInit: string | URLPatternInit,
+    urlPattern: string | URLPatternInit,
     onRequest: OnRequestFn
 ) {
-    const urlPattern = new URLPattern(
-        typeof pathnameOrInit === "string" ? {
-            pathname: pathnameOrInit
-        } : pathnameOrInit
-    );
     const rule: RouterRule = {
         condition: [
             {

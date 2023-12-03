@@ -7,6 +7,7 @@ import {addEventListener} from "../../events/schedule/schedule";
 import {dispatchEvent} from "../../events";
 import {DurablePeriodicSyncManager} from "../../periodic-sync";
 import {getInternalStorageBucket, InternalBucket} from "../../storage-buckets/internal";
+import {getOrigin} from "../../listen";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -18,6 +19,8 @@ export interface DurableServiceWorkerRegistrationData {
     registeredAt: string;
     initialUrl: string;
     url: string;
+    origin: string;
+    baseURL: string;
     options?: RegistrationOptions;
 }
 
@@ -265,6 +268,16 @@ export class DurableServiceWorkerContainer {
             }
             return instance;
         }
+        const workerOrigin = instance.protocol === "file:" ?
+            getOrigin() :
+            instance.origin;
+        const origin = options?.scope ?
+            new URL(options.scope, workerOrigin).origin :
+            workerOrigin;
+        const baseURL = options?.scope ?
+            new URL(options.scope, origin).toString() :
+            new URL(url, origin).toString();
+
         const registeredAt = new Date().toISOString();
         const registration: DurableServiceWorkerRegistrationData = {
             serviceWorkerId,
@@ -274,6 +287,8 @@ export class DurableServiceWorkerContainer {
             registrationStateAt: registeredAt,
             initialUrl: url.toString(),
             url: instance.toString(),
+            origin,
+            baseURL,
             options
         };
         await store.set(serviceWorkerId, registration);
