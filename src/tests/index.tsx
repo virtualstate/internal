@@ -16,16 +16,16 @@ try {
     await startRedisMemory()
   }
 
-  // await import("./storage");
-  // await import("./schedule");
-  // await import("./cache");
+  await import("./storage");
+  await import("./schedule");
+  await import("./cache");
 
   // Redis is a stable store... need to replace the default local
   // store for workers, but that is a later task
   if (isRedis() && typeof Bun === "undefined") {
     await import("./worker");
 
-    // await import("./readme");
+    await import("./readme");
   }
 
   // Ensure any data clients are closed

@@ -489,22 +489,22 @@ async function createFileBody(cloned: Request | Response, contentType: string, o
 }
 
 async function fromBody(input: Request | Response, options?: FromRequestResponseOptions): Promise<DurableBodyLike | undefined> {
-    // if (options?.body) {
-    //     return options.body;
-    // }
+    if (options?.body) {
+        return options.body;
+    }
 
     // TODO detect string based contentTypes
     const contentType = input.headers.get("Content-Type");
     const cloned = input.clone();
-    // if (contentType === "text/html" || contentType === "text/plain" || contentType?.startsWith("application/json") || contentType === "application/javascript") {
-    //     return cloned.text();
-    // }
+    if (contentType === "text/html" || contentType === "text/plain" || contentType?.startsWith("application/json") || contentType === "application/javascript") {
+        return cloned.text();
+    }
 
     // if (options?.persist) {
     //     return createFileBody(cloned, contentType, options);
     // }
 
-    return createBroadcastBody(cloned, options)
+    return createFileBody(cloned, contentType, options);
 }
 
 export async function fromRequestResponse(request: Request | DurableRequestData, response: Response, options?: FromRequestResponseOptions): Promise<DurableRequestData> {
