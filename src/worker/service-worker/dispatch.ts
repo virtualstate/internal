@@ -1,6 +1,6 @@
 import {
     DurableEventData,
-    DurableResponseData,
+    DurableResponseData, fromRequestResponse,
     fromRequestResponseWithoutBody
 } from "../../data";
 import {ServiceWorkerWorkerData} from "./worker";
@@ -50,6 +50,7 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
         respondWith
     };
 
+    console.log("dispatching service worker event");
     const eventPromise = dispatchEvent(dispatch);
 
     const response = await Promise.any<Response>([
@@ -59,21 +60,25 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
         eventPromise.then<Response>(() => new Promise(() => {}))
     ]);
 
+    console.log("Emit response");
+
+    const { response: output } = await fromRequestResponse(event.request, response);
+
     emit({
-        response: fromRequestResponseWithoutBody(event.request, response)
+        response: output
     });
 
-    const reader = response.body.getReader();
-
-    let chunk;
-    do {
-        chunk = await reader.read();
-        if (!chunk.done) {
-            emit({
-                data: chunk.value
-            });
-        }
-    } while (chunk.done);
+    // const reader = response.body.getReader();
+    //
+    // let chunk;
+    // do {
+    //     chunk = await reader.read();
+    //     if (!chunk.done) {
+    //         emit({
+    //             data: chunk.value
+    //         });
+    //     }
+    // } while (chunk.done);
 
     await eventPromise;
 
@@ -84,7 +89,12 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
             index,
             type: "fetch:response"
         }
-        port.postMessage(complete);
+        try {
+            port.postMessage(complete);
+        } catch (error) {
+            console.error("Failed to emit", error);
+            throw error;
+        }
     }
 
 }

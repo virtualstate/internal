@@ -45,10 +45,11 @@ export let removeFetchScheduledFunction = () => {};
 
 if (isMainThread) {
     removeFetchScheduledFunction = on(FETCH, async (event) => {
+        console.log("FETCHING!");
         ok(isFetchEvent(event));
         event.respondWith(
             fetch(
-                event.request
+                event.request.clone()
             )
         );
     });

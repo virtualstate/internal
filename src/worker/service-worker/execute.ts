@@ -4,7 +4,7 @@ import {getNodeWorkerForImportURL} from "../worker";
 import {Push} from "@virtualstate/promise";
 import {PushAsyncIterableIterator} from "@virtualstate/promise/src/push";
 import {isLike, ok} from "../../is";
-import {WORKER_BREAK, WORKER_INITIATED, WORKER_MESSAGE, WORKER_TERMINATE} from "./constants";
+import {WORKER_BREAK, WORKER_ERROR, WORKER_INITIATED, WORKER_MESSAGE, WORKER_TERMINATE} from "./constants";
 import {anAsyncThing, TheAsyncThing} from "@virtualstate/promise/the-thing";
 import type {TransferListItem as NodeTransferListItem, MessageChannel as NodeMessageChannel} from "node:worker_threads";
 import type {DurableEventData} from "../../data";
@@ -65,9 +65,8 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
 
         const messages = new Push();
 
-        function pushClose() {
+        function channelsClose() {
             channel.port1.off("message", onMessage);
-            messages.close();
             defaultChannel.port1.off("message", onDefaultMessage);
             // Note we are closing this off
             // Even though its externally provided...
@@ -77,10 +76,23 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
             }
         }
 
+        function pushClose() {
+            messages.close();
+            channelsClose();
+        }
+
+        function pushError(error: unknown) {
+            messages.throw(error);
+            channelsClose();
+        }
+
         function onDefaultMessage(message: unknown) {
+            if (message === WORKER_ERROR) {
+                pushError("Unhandled worker error");
+                return true;
+            }
             if (message === WORKER_TERMINATE) {
                 pushClose();
-                void close();
                 return true;
             }
             if (!messages.open || message === WORKER_BREAK) {
@@ -101,7 +113,12 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
         defaultChannel.port1.on("message", onDefaultMessage);
 
         ok<NodeTransferListItem[]>(transfer);
-        worker.postMessage(message, transfer);
+        try {
+            worker.postMessage(message, transfer);
+        } catch (error) {
+            console.error("Could not post error to worker");
+            pushError(error);
+        }
 
         return anAsyncThing(onMessages());
 

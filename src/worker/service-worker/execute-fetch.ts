@@ -61,6 +61,7 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
 
     const iterator = data[Symbol.asyncIterator]();
 
+    console.log("Get response from message")
     return getResponse();
 
     async function getResponse() {
@@ -68,16 +69,15 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
         if (!message) {
             throw new Error("Unable to retrieve response");
         }
-        return fromDurableResponse({
-            ...message.response,
-            body: createBody()
-        })
+        console.log("Got response from message", message.response);
+        return fromDurableResponse(message.response)
     }
 
     function createBody(): undefined | BodyInit {
         const stream = new ReadableStream({
             async pull(controller) {
                 const message = await next();
+                console.log({ message });
                 if (!message) {
                     return controller.close();
                 }

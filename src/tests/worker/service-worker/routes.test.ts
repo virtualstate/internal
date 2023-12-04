@@ -5,11 +5,22 @@ import {fileURLToPath} from "node:url";
 import {dirname, join} from "node:path";
 import {v4} from "uuid";
 import {waitForServiceWorker} from "./wait";
+import process from "node:process";
 
 export {};
 
 const pathname = fileURLToPath(import.meta.url);
 const worker = join(dirname(pathname), "./routes.worker.js");
+
+process.on("uncaughtException", console.error);
+process.on("unhandledRejection", error => {
+    if (error instanceof Error) {
+        debugger;
+        console.error(error, error.stack, "error" in error ? error.error : undefined)
+    } else {
+        console.error(error);
+    }
+});
 
 {
     const registration = await serviceWorker.register(worker);
@@ -40,12 +51,12 @@ const worker = join(dirname(pathname), "./routes.worker.js");
         });
 
         console.log(response.status);
-        // ok(response.ok);
+        ok(response.ok);
 
         const text = await response.text();
 
         console.log(text);
-        // ok(text === body, "Expected returned body to match");
+        ok(text === body, "Expected returned body to match");
     }
 
 

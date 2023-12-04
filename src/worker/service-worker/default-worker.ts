@@ -1,6 +1,6 @@
 import "./dispatchers";
 import {Push} from "@virtualstate/promise";
-import {WORKER_BREAK, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
+import {WORKER_BREAK, WORKER_ERROR, WORKER_INITIATED, WORKER_TERMINATE} from "./constants";
 import {parentPort, workerData} from "node:worker_threads";
 import {onServiceWorkerWorkerData, ServiceWorkerWorkerData} from "./worker";
 import { ok } from "../../is";
@@ -15,24 +15,33 @@ try {
 
     let receivedMessage = false;
 
-    async function cleanup() {
+    function cleanup() {
         parentPort.off("message", onMessage);
         messages.close();
     }
 
     function onMessage(message: string) {
-        receivedMessage = true;
-        console.log("Message for worker", message);
-        if (!messages.open || message === WORKER_TERMINATE) {
-            return cleanup();
+        try {
+            receivedMessage = true;
+            console.log("Message for worker", message);
+            if (message === WORKER_ERROR) {
+                console.log("Received worker error message");
+                return cleanup()
+            }
+            if (!messages.open || message === WORKER_TERMINATE) {
+                return cleanup();
+            }
+            messages.push(message);
+        } catch (error) {
+            console.error("Uncaught onMessage handler", error);
+            postMessage(WORKER_ERROR)
         }
-        messages.push(message);
     }
     parentPort.on("message", onMessage);
     console.log("Listening for messages inside worker");
 
 
-    workerData.postMessage(WORKER_INITIATED);
+    postMessage(WORKER_INITIATED);
     console.log("Initiated inside worker");
 
     let initiatedCount = 0;
@@ -41,7 +50,7 @@ try {
             clearInterval(initiatedInterval);
             return;
         }
-        workerData.postMessage(WORKER_INITIATED);
+        postMessage(WORKER_INITIATED);
         console.log("Initiated inside worker", initiatedCount++);
     }, 500)
 
@@ -55,13 +64,25 @@ try {
         }
 
         ok<ServiceWorkerWorkerData>(message);
-        await onServiceWorkerMessage(message);
+        try {
+            await onServiceWorkerMessage(message);
+        } catch (error) {
+            console.error("worker error", error);
+            postMessage(WORKER_ERROR);
+            break;
+        }
 
         console.log("Breaking worker!");
-        workerData.postMessage(WORKER_BREAK);
+        postMessage(WORKER_BREAK);
     }
 
-    workerData.postMessage(WORKER_TERMINATE);
+    function postMessage(message: unknown) {
+        try {
+            workerData.postMessage(message);
+        } catch (error) {
+            console.error("Failed to postMessage");
+        }
+    }
 
     async function onServiceWorkerMessage(message: ServiceWorkerWorkerData) {
         const { serviceWorkerId } = message;
