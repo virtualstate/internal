@@ -25,6 +25,7 @@ jobs:
       PRODUCTFILE_REMOTE_URL: ${{ secrets.PRODUCTFILE_REMOTE_URL }}
       PRODUCTFILE_REMOTE_TOKEN: ${{ secrets.PRODUCTFILE_REMOTE_TOKEN }}
       LISTEN_HOST: localhost
+      ORIGIN: https://internal.virtualstate.dev
     services:
       # Label used to access the service container
       redis:
