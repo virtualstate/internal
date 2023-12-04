@@ -33,7 +33,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     const registration = await getDurableServiceWorkerRegistration(internalBucket, data.serviceWorkerId, {
         isCurrentGlobalScope: true
     });
-    const { protocol, origin } = new URL(registration.durable.url);
+    const { protocol, origin } = new URL(registration.durable.baseURL || registration.durable.url);
 
     Object.assign(globalThis, {
         registration,
