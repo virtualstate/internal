@@ -276,7 +276,8 @@ export class DurableCache implements Cache {
             clonedRequest,
             response,
             {
-                fileName: join(CACHE_STORE_NAME, this.name, cacheUrl, durableRequestId)
+                fileName: join(CACHE_STORE_NAME, this.name, cacheUrl, durableRequestId),
+                persist: true
             }
         );
 

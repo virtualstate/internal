@@ -15,7 +15,7 @@ export interface DurableResponseCache {
 }
 
 export interface DurableBody {
-    type: "file" | "base64" | "cache";
+    type: "file" | "base64" | "cache" | "broadcast";
     value: string;
     url?: string;
 }

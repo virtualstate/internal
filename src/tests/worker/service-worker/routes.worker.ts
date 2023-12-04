@@ -5,7 +5,7 @@ requestMethod.get("/test", () => {
     return new Response("Hello from test get handler");
 })
 
-requestMethod.put("/test", (request) => {
+requestMethod.put("/test", async (request) => {
     console.log("In put handler");
     return new Response(request.body, {
         headers: request.headers

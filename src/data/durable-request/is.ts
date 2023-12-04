@@ -8,7 +8,8 @@ export function isDurableBody(value: unknown): value is DurableBody {
         (
             value.type === "file" ||
             value.type === "base64" ||
-            value.type === "cache"
+            value.type === "cache" ||
+            value.type === "broadcast"
         ) &&
         typeof value.value === "string"
     )
