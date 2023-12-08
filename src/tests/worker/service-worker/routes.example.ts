@@ -44,24 +44,22 @@ function addRequestMethodRouteAndHandler(
     urlPattern: string | URLPatternInit,
     onRequest: OnRequestFn
 ) {
-    const condition = [
-        {
-            requestMethod
-        },
-        {
-            urlPattern
-        }
-    ];
     const tag = `${requestMethod}:${JSON.stringify(urlPattern)}`;
-    const rule: RouterRule = {
-        condition,
-        source: {
-            type: "fetch-event",
-            tag
-        }
-    }
     self.addEventListener("install", event => {
-        event.addRoutes(rule)
+        event.addRoutes({
+            condition: [
+                {
+                    requestMethod
+                },
+                {
+                    urlPattern
+                }
+            ],
+            source: {
+                type: "fetch-event",
+                tag
+            }
+        })
     });
     self.addEventListener("fetch", event => {
         if (event.tag === tag) {
