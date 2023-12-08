@@ -1,9 +1,8 @@
 import {DurableBody, DurableBodyLike, DurableRequestData, DurableResponseData} from "./types";
 import {isDurableBody} from "./is";
-import {isAsyncIterable, isLike, ok} from "../../is";
+import {isLike, ok} from "../../is";
 import {getFile, readFile, save} from "../file";
 import {v4} from "uuid";
-import {DurableEventData} from "../durable-event";
 
 function isReadableStreamLike(body: unknown): body is ReadableStream {
     return (
@@ -34,129 +33,17 @@ export async function fromMaybeDurableBody(body: unknown): Promise<BodyInit> {
     throw new Error("Unknown body type");
 }
 
-function instanceBroadcast(url: string) {
-    return new BroadcastChannel(url);
-}
-
-async function fromDurableBroadcast({ value: token, url }: DurableBody): Promise<RequestInit["body"]> {
-    console.log("fromDurableBroadcast", { url, token });
-    ok(url, "Expected url for broadcast channel");
-
-    const instance = v4();
-    const channel = new BroadcastChannel(url);
-
-    channel.addEventListener("messageerror", error => console.error("messageerror", error));
-    channel.addEventListener("error", error => console.error("error", error));
-
-    if ("unref" in channel && channel.unref instanceof Function) {
-        channel.unref();
-    }
-
-    return new ReadableStream({
-        start(controller) {
-            console.log("ReadableStream start");
-
-            async function onBroadcastMessage(event: BroadcastEvent) {
-                console.log({ stream: event });
-                if (event.token !== token) return console.log("stream unknown token");
-                if (event.instance !== instance) return console.log("stream unknown instance");
-                if (event.type === "close") {
-                    console.log("stream closing")
-                    return onReturn(controller);
-                }
-                if (event.type === "error") {
-                    console.log("stream error")
-                    return controller.error(event.error ?? "error");
-                }
-                if (event.type === "value") {
-                    console.log("stream value")
-                    return controller.enqueue(event.value);
-                }
-                throw new Error(`Unknown type ${event.type}`);
-            }
-
-            function onMessage(event: unknown) {
-                console.log("fromDurableBroadcast message", event);
-                if (!isBroadcastMessageEvent(event)) return event;
-                const { data } = event;
-                const promise = onBroadcastMessage(data);
-                catchError(promise);
-            }
-
-            async function catchError(promise: Promise<void>) {
-                promise
-                    .catch(error => {
-                        console.log("fromDurableBroadcast error", error);
-                        onReturn(controller);
-                        postMessage({
-                            type: "error",
-                            error,
-                        });
-                    })
-            }
-
-            console.log("fromDurableBroadcast addEventListener")
-            channel.addEventListener("message", onMessage)
-
-            // function onClose() {
-            //     postMessage({
-            //         type: "close"
-            //     });
-            //     onReturn();
-            // }
-
-        },
-        pull() {
-            // Ask for a push of all the data. Ty
-            console.log("fromDurableBroadcast pull");
-            postMessage({
-                type: "pull"
-            });
-        },
-        cancel() {
-            onReturn()
-        }
-    })
-
-    function postMessage(event: Omit<BroadcastEvent, "token" | "instance">) {
-        try {
-            channel.postMessage({
-                ...event,
-                instance,
-                token,
-            });
-        } catch (error) {
-            console.error("Failed to post message", error);
-        }
-    }
-
-
-    function onReturn(controller?: ReadableStreamController<unknown>) {
-        console.log("stream onReturn");
-        try {
-            controller?.close();
-            console.log("stream controller.close");
-        } catch (error) {
-            console.log("stream error", error)
-        }
-        // channel.close();
-    }
-
-
-
-
-
-}
-
 export async function fromDurableBody(body: DurableBody): Promise<RequestInit["body"]> {
-    if (body.type === "base64") {
-        return Buffer.from(body.value, body.type);
+    if (body.type === "source") {
+        return body.value;
     }
-    if (body.type === "broadcast") {
-        return fromDurableBroadcast(body);
+    if (body.type === "base64") {
+        ok(typeof body.value === "string", "Expected body value to be a string");
+        return Buffer.from(body.value, body.type);
     }
     if (body.type === "cache") {
         const { url, value: cacheName } = body;
+        ok(typeof cacheName === "string", "Expected body value to be a string");
         ok(url, "Expected url to be provided to resolve cache body");
         const { caches } = await import("../../fetch");
         const cache = await caches.open(cacheName);
@@ -165,6 +52,7 @@ export async function fromDurableBody(body: DurableBody): Promise<RequestInit["b
         return match.blob();
     }
     ok(body.type === "file", `Unknown body type ${body.type}`);
+    ok(typeof body.value === "string", "Expected body value to be a string");
     const file = await getFile(body.value);
     ok(file, `Expected to find file ${file.fileId}`);
     const found = await readFile(file);
@@ -175,13 +63,15 @@ export async function fromDurableBody(body: DurableBody): Promise<RequestInit["b
 export async function fromDurableRequest(durableRequest: Request | DurableRequestData, getOrigin?: () => string) {
     const { url, method, headers, body: givenBody } = durableRequest;
     const body = await fromMaybeDurableBody(givenBody);
+    const init: RequestInit & { duplex?: unknown } = {
+        method,
+        headers,
+        body,
+        duplex: body ? "half" : undefined
+    }
     return new Request(
         new URL(url, getOrigin?.()),
-        {
-            method,
-            headers,
-            body
-        }
+        init
     );
 }
 
@@ -243,239 +133,6 @@ export function fromRequestResponseWithoutBody(request: Pick<DurableRequestData,
     };
 }
 
-const BROADCAST_OPEN = "open" as const;
-const BROADCAST_PULL = "pull" as const;
-const BROADCAST_PUSH = "push" as const;
-const BROADCAST_VALUE = "value" as const;
-const BROADCAST_ERROR = "error" as const;
-const BROADCAST_CLOSE = "close" as const;
-
-interface BroadcastEvent extends DurableEventData {
-    type:
-        | typeof BROADCAST_OPEN
-        | typeof BROADCAST_PULL
-        | typeof BROADCAST_PUSH
-        | typeof BROADCAST_VALUE
-        | typeof BROADCAST_CLOSE
-        | typeof BROADCAST_ERROR
-    token: string;
-    instance: string;
-    error?: unknown;
-    value?: unknown;
-    index?: number;
-}
-
-export interface BroadcastMessageEvent {
-    type: "message",
-    data: BroadcastEvent
-}
-
-
-function isBroadcastMessageEvent(event: unknown): event is BroadcastMessageEvent {
-    if (isLike<Partial<BroadcastMessageEvent>>(event)) {
-        console.log(event.data, isBroadcastEvent(event.data), event.type);
-    }
-    return (
-        isLike<Partial<BroadcastMessageEvent>>(event) &&
-        event.type === "message" &&
-        isBroadcastEvent(event.data)
-    )
-}
-
-function isBroadcastEvent(event: unknown): event is BroadcastEvent {
-    return (
-        isLike<Partial<BroadcastEvent>>(event) &&
-        (
-            event.type === BROADCAST_PULL ||
-            event.type === BROADCAST_PUSH ||
-            event.type === BROADCAST_VALUE ||
-            event.type === BROADCAST_CLOSE ||
-            event.type === BROADCAST_ERROR||
-            event.type === BROADCAST_OPEN
-        ) &&
-        typeof event.token === "string" &&
-        typeof event.instance === "string"
-    )
-}
-
-async function createBroadcastBody(input: Request | Response, options?: FromRequestResponseOptions): Promise<DurableBodyLike> {
-
-    const url = new URL(`body-channel://${v4()}/${input.url || ""}"`).toString();
-    const token = v4();
-    const channel = new BroadcastChannel(url);
-
-    channel.addEventListener("messageerror", error => console.error("createBroadcastBody messageerror", error));
-    channel.addEventListener("error", error => console.error("createBroadcastBody error", error));
-
-
-    const instancesWithBreak = new Set<string>();
-    const instanceIterators = new Map<string, AsyncIterableIterator<unknown>>();
-    const instanceIndex = new Map<string, number>();
-    const instanceWait = new Map<string, Promise<void>>();
-
-    function getIterator(instance: string) {
-        const existing = instanceIterators.get(instance);
-        if (existing) {
-            return existing;
-        }
-        const iterator = generate();
-        instanceIterators.set(instance, iterator);
-        return iterator;
-    }
-
-    async function * generate() {
-        const cloned = input.clone();
-        if (isAsyncIterable(cloned.body)) {
-            return yield * cloned.body;
-        }
-        throw new Error("Expected async iterable readable stream");
-    }
-
-    function hasBreak(instance: string) {
-        return options?.signal?.aborted || instancesWithBreak.has(instance);
-    }
-
-
-    async function push({ instance }: BroadcastEvent) {
-        let didBreak = false;
-        for await (const value of getIterator(instance)) {
-            if (hasBreak(instance)) {
-                didBreak = true;
-                break;
-            }
-            onInstanceValue(instance, value);
-        }
-        if (!didBreak) {
-            console.log("end of iterator stream")
-            await onInstanceClose(instance);
-        }
-    }
-
-    function onInstanceValue(instance: string, value: unknown) {
-        postMessage({
-            type: "value",
-            token,
-            instance,
-            value
-        });
-    }
-
-    async function onInstanceClose(instance: string) {
-        postMessage({
-            type: "close",
-            instance,
-            token
-        });
-        await onInstanceReturn(instance);
-    }
-
-    async function onInstanceReturn(instance: string) {
-        channel.removeEventListener("message", onMessage);
-        // channel.close();
-        instancesWithBreak.delete(instance);
-        instanceWait.delete(instance);
-        instanceIndex.delete(instance);
-        const existing = instanceIterators.get(instance);
-        instanceIterators.delete(instance);
-        try {
-            await existing?.return?.();
-        } catch {
-            // Ghost error
-        }
-    }
-
-
-    function getIndex({ instance }: BroadcastEvent) {
-        const currentIndex = instanceIndex.get(instance) ?? -1;
-        const index = currentIndex + 1;
-        instanceIndex.set(instance, index);
-        return index;
-    }
-
-    function postMessage(event: BroadcastEvent) {
-        channel.postMessage({
-            ...event,
-            index: getIndex(event)
-        });
-    }
-
-    async function catchError({ instance }: BroadcastEvent, promise: Promise<void>) {
-        promise
-            .catch(error => {
-                instancesWithBreak.add(instance);
-                postMessage({
-                    type: "error",
-                    error,
-                    token,
-                    instance
-                });
-            })
-            .finally(() => onInstanceReturn(instance))
-    }
-
-    async function wait(event: BroadcastEvent, fn: (event: BroadcastEvent) => Promise<void>) {
-        const { instance } = event;
-        const existing = instanceWait.get(instance);
-        if (existing) {
-            const promise = existing.then(() => fn(event));
-            instanceWait.set(instance, promise);
-            return promise;
-        } else {
-            const promise = fn(event);
-            // Don't catch an error as we want any error in an instance to break anyway
-            instanceWait.set(instance, promise);
-            return promise;
-        }
-
-    }
-
-    async function pull({ instance }: BroadcastEvent) {
-        const iterator = getIterator(instance);
-        const next = await iterator.next();
-        if (next.done) {
-            console.log("end of iterator")
-            await onInstanceClose(instance);
-        } else {
-            onInstanceValue(instance, next.value);
-        }
-    }
-
-    async function onBroadcastEvent(event: BroadcastEvent) {
-        console.log({ source: event });
-        if (event.token !== token) return;
-        if (event.type === "push") {
-            return push(event);
-        }
-        if (event.type === "pull") {
-            return wait(event, pull);
-        }
-        if (event.type === "close") {
-            return onInstanceReturn(event.instance);
-        }
-        if (event.type === "error") {
-            instancesWithBreak.add(event.instance);
-            return onInstanceClose(event.instance);
-        }
-    }
-
-    function onMessage(event: unknown) {
-        console.log("createBroadcastBody message", event, isBroadcastMessageEvent(event));
-        if (!isBroadcastMessageEvent(event)) return;
-        const { data } = event;
-        const promise = onBroadcastEvent(data);
-        catchError(data, promise);
-    }
-
-    console.log("createBroadcastBody");
-    channel.addEventListener("message", onMessage);
-
-    return {
-      type: 'broadcast',
-      value: token,
-      url
-    };
-}
-
 async function createFileBody(cloned: Request | Response, contentType: string, options?: FromRequestResponseOptions): Promise<DurableBodyLike> {
     // // TODO warning, we might mislink some of these files...
     const file = await save({
@@ -500,11 +157,14 @@ async function fromBody(input: Request | Response, options?: FromRequestResponse
         return cloned.text();
     }
 
-    // if (options?.persist) {
-    //     return createFileBody(cloned, contentType, options);
-    // }
+    if (options?.persist) {
+        return createFileBody(cloned, contentType, options);
+    }
 
-    return createFileBody(cloned, contentType, options);
+    return {
+        type: "source",
+        value: cloned.body
+    }
 }
 
 export async function fromRequestResponse(request: Request | DurableRequestData, response: Response, options?: FromRequestResponseOptions): Promise<DurableRequestData> {

@@ -3,7 +3,7 @@ import {getKeyValueStore} from "../../data";
 import {getServiceWorkerId} from "./service-worker-config";
 import {v4} from "uuid";
 import {DurableServiceWorkerRegistration, listServiceWorkers} from "./container";
-import {createServiceWorkerFetch} from "./execute-fetch";
+import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 import {ok} from "../../is";
 import {caches} from "../../fetch";
 
@@ -407,7 +407,7 @@ export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistr
     }
 }
 
-export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<typeof fetch> {
+export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<FetchFn> {
     const resolveServiceWorkers = serviceWorkers ?? await listServiceWorkers();
     const serviceWorkerRoutes = new Map<DurableServiceWorkerRegistration, RouterRule[]>();
 

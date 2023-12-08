@@ -40,7 +40,7 @@ export async function getNodeWorker<T>(url: string | URL, options?: WorkerOption
     const instance = new URL(url);
     const { protocol } = instance;
     ok(protocol === "file:", "Only file import worker supported... for now, please open an issue");
-    console.log("Get worker for", instance.pathname);
+    // console.log("Get worker for", instance.pathname);
     return getDefaultNodeWorker(instance.pathname, {
         ...options
     });

@@ -8,6 +8,7 @@ import {createRespondWith, DurableFetchEventData, isDurableFetchEventData} from 
 import {dispatchEvent} from "../../events";
 import {ok} from "../../is";
 import {dispatchScheduledDurableEvents} from "../../events/schedule/dispatch-scheduled";
+import {listTransferable} from "./transferrable";
 
 export interface FetchResponseMessage {
     type: "fetch:response";
@@ -50,7 +51,7 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
         respondWith
     };
 
-    console.log("dispatching service worker event");
+    // console.log("dispatching service worker event");
     const eventPromise = dispatchEvent(dispatch);
 
     const response = await Promise.any<Response>([
@@ -60,7 +61,7 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
         eventPromise.then<Response>(() => new Promise(() => {}))
     ]);
 
-    console.log("Emit response");
+    // console.log("Emit response");
 
     const { response: output } = await fromRequestResponse(event.request, response);
 
@@ -90,7 +91,7 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
             type: "fetch:response"
         }
         try {
-            port.postMessage(complete);
+            port.postMessage(complete, listTransferable(complete));
         } catch (error) {
             console.error("Failed to emit", error);
             throw error;

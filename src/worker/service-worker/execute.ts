@@ -8,6 +8,7 @@ import {WORKER_BREAK, WORKER_ERROR, WORKER_INITIATED, WORKER_MESSAGE, WORKER_TER
 import {anAsyncThing, TheAsyncThing} from "@virtualstate/promise/the-thing";
 import type {TransferListItem as NodeTransferListItem, MessageChannel as NodeMessageChannel} from "node:worker_threads";
 import type {DurableEventData} from "../../data";
+import {listTransferable} from "./transferrable";
 
 export function getServiceWorkerWorkerWorker(options?: WorkerOptions) {
     return getNodeWorkerForImportURL("./default-worker.js", import.meta.url, {
@@ -28,7 +29,7 @@ export interface Pushable<T, R> {
 }
 
 export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorkerWorkerData, unknown>> {
-    console.log("Getting worker");
+    // console.log("Getting worker");
     const { MessageChannel: NodeMessageChannel } = await import("node:worker_threads");
     const defaultChannel = new NodeMessageChannel();
     const { port1, port2 } = defaultChannel;
@@ -39,9 +40,9 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
         ]
     });
 
-    console.log("Waiting for initiation of worker");
+    // console.log("Waiting for initiation of worker");
     await onInitiated();
-    console.log("Initiated worker");
+    // console.log("Initiated worker");
 
     return {
         push,
@@ -50,7 +51,9 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
 
     function push(data: ServiceWorkerWorkerData): TheAsyncThing {
         let channel: NodeMessageChannel = defaultChannel;
-        const transfer = [];
+        const transfer = [
+            ...listTransferable(data)
+        ];
         let message = data;
 
         if (data.channel) {
@@ -111,6 +114,7 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
         }
         channel.port1.on("message", onMessage);
         defaultChannel.port1.on("message", onDefaultMessage);
+
 
         ok<NodeTransferListItem[]>(transfer);
         try {

@@ -53,13 +53,13 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
 
     if (registration.durable.registrationState === "pending" || registration.durable.registrationState === "installing") {
         try {
-            console.log("Installing service worker");
+            // console.log("Installing service worker");
             await setRegistrationStatus( "installing");
             await dispatchEvent({
                 type: "install",
                 virtual: true
             });
-            console.log("Installed service worker");
+            // console.log("Installed service worker");
             await setRegistrationStatus( "installed");
         } catch (error) {
             console.error("Error installing service worker", error);
@@ -78,7 +78,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
             await setRegistrationStatus("installed");
         }
     }
-    console.log(registration.durable.registrationState);
+    // console.log(registration.durable.registrationState);
     if (registration.durable.registrationState === "activated") {
         await dispatchEvent({
             type: "activated",

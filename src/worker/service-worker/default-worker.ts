@@ -6,8 +6,9 @@ import {onServiceWorkerWorkerData, ServiceWorkerWorkerData} from "./worker";
 import { ok } from "../../is";
 import {dispatchWorkerEvent} from "./dispatch";
 import {DurableServiceWorkerRegistration} from "./container";
+import {listTransferable} from "./transferrable";
 
-console.log("Default worker!");
+// console.log("Default worker!");
 
 try {
 
@@ -23,9 +24,9 @@ try {
     function onMessage(message: string) {
         try {
             receivedMessage = true;
-            console.log("Message for worker", message);
+            // console.log("Message for worker", message);
             if (message === WORKER_ERROR) {
-                console.log("Received worker error message");
+                // console.log("Received worker error message");
                 return cleanup()
             }
             if (!messages.open || message === WORKER_TERMINATE) {
@@ -38,11 +39,11 @@ try {
         }
     }
     parentPort.on("message", onMessage);
-    console.log("Listening for messages inside worker");
+    // console.log("Listening for messages inside worker");
 
 
     postMessage(WORKER_INITIATED);
-    console.log("Initiated inside worker");
+    // console.log("Initiated inside worker");
 
     let initiatedCount = 0;
     const initiatedInterval = setInterval(() => {
@@ -51,14 +52,14 @@ try {
             return;
         }
         postMessage(WORKER_INITIATED);
-        console.log("Initiated inside worker", initiatedCount++);
+        // console.log("Initiated inside worker", initiatedCount++);
     }, 500)
 
     let registration: DurableServiceWorkerRegistration;
 
-    console.log("Waiting for messages inside worker");
+    // console.log("Waiting for messages inside worker");
     for await (const message of messages) {
-        console.log("Received worker message", message);
+        // console.log("Received worker message", message);
         if (message === WORKER_BREAK) {
             continue;
         }
@@ -67,18 +68,18 @@ try {
         try {
             await onServiceWorkerMessage(message);
         } catch (error) {
-            console.error("worker error", error);
+            // console.error("worker error", error);
             postMessage(WORKER_ERROR);
             break;
         }
 
-        console.log("Breaking worker!");
+        // console.log("Breaking worker!");
         postMessage(WORKER_BREAK);
     }
 
     function postMessage(message: unknown) {
         try {
-            workerData.postMessage(message);
+            workerData.postMessage(message, listTransferable(message));
         } catch (error) {
             console.error("Failed to postMessage");
         }

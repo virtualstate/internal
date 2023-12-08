@@ -6,13 +6,21 @@ import type {FetchResponseMessage} from "./dispatch";
 import {DurableServiceWorkerRegistration, serviceWorker} from "./container";
 import {getOrigin} from "../../listen/config";
 
+export interface FetchInit extends RequestInit {
+    duplex?: "half";
+}
+
+export interface FetchFn {
+    (input: RequestInfo, init?: FetchInit): Promise<Response>
+}
+
 export async function registerServiceWorkerFetch(worker: string, options?: RegistrationOptions) {
     const registration = await serviceWorker.register(worker, options);
     return createServiceWorkerFetch(registration);
 }
 
-export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration): typeof fetch {
-    return (input: RequestInfo, init?: RequestInit) => {
+export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration): FetchFn {
+    return (input, init) => {
         let request: Request | DurableRequestData;
         if (input instanceof Request) {
             request = input
@@ -61,7 +69,6 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
 
     const iterator = data[Symbol.asyncIterator]();
 
-    console.log("Get response from message")
     return getResponse();
 
     async function getResponse() {
@@ -69,7 +76,6 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
         if (!message) {
             throw new Error("Unable to retrieve response");
         }
-        console.log("Got response from message", message.response);
         return fromDurableResponse(message.response)
     }
 
@@ -77,7 +83,6 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
         const stream = new ReadableStream({
             async pull(controller) {
                 const message = await next();
-                console.log({ message });
                 if (!message) {
                     return controller.close();
                 }

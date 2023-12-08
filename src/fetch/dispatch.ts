@@ -197,10 +197,8 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
         wait,
         waitUntil
     } = createWaitUntil(event);
-    console.log("Creating fetch request");
-    const request = await fromDurableRequest(event.request);
-    console.log("Have fetch request", request);
     try {
+        const request = await fromDurableRequest(event.request);
         await dispatch({
             ...event,
             signal,

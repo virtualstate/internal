@@ -14,9 +14,14 @@ export interface DurableResponseCache {
     name: string;
 }
 
+export type BodySource = BodyInit & (
+    | ArrayBuffer
+    | ReadableStream
+)
+
 export interface DurableBody {
-    type: "file" | "base64" | "cache" | "broadcast";
-    value: string;
+    type: "file" | "base64" | "cache" | "source";
+    value: string | BodySource;
     url?: string;
 }
 
