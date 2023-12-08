@@ -20,8 +20,10 @@ self.addEventListener("install", event => {
                 ]
             },
             source: [
-                "network",
-                "fetch-event"
+                {
+                    type: "fetch-event",
+                    tag: "fetch-any"
+                }
             ]
         }
     ])
@@ -34,7 +36,7 @@ self.addEventListener("activate", event => {
 })
 
 self.addEventListener("fetch", event => {
-    console.log("In fetch handler!");
+    console.log("In fetch handler!", event.tag || "untagged");
     event.respondWith(onFetchEvent(event));
 });
 

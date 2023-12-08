@@ -28,18 +28,27 @@ export interface RouterSource {
     behaviorEnum?: RouterSourceBehaviorEnum;
 }
 
+export interface RouterRaceNetworkAndFetchHandlerSource extends RouterSource {
+    type: "race-network-and-fetch-handler";
+    tag?: string;
+}
+
 export interface RouterNetworkSource extends RouterSource {
+    type: "network";
     updatedCacheName?: string;
-    cacheErrorResponse?: boolean
+    cacheErrorResponse?: boolean;
 }
 
 export interface RouterCacheSource extends RouterSource {
+    type: "cache";
     cacheName?: string;
     request?: RequestInfo;
 }
 
 export interface RouterFetchEventSource extends RouterSource {
+    type: "fetch-event";
     id?: string;
+    tag?: string;
 }
 
 export interface RouterURLPatternCondition {
@@ -98,6 +107,7 @@ export type RouterRuleSource =
     | RouterSource
     | RouterCacheSource
     | RouterFetchEventSource
+    | RouterRaceNetworkAndFetchHandlerSource
     | RouterSourceEnum;
 
 export interface RouterRule {
@@ -158,14 +168,14 @@ export function isRouterNotCondition(condition: RouterCondition): condition is R
     return "not" in condition && Boolean(condition.not);
 }
 
-export function isRouterSourceObject(source: RouterRuleSource): source is RouterNetworkSource {
+export function isRouterSourceObject(source: RouterRuleSource): source is RouterSource {
     return (
         typeof source === "object" &&
         "type" in source
     );
 }
 
-export function isRouterSourceType(source: RouterRuleSource, type: RouterSourceEnum) {
+export function isRouterSourceType<T extends RouterSourceEnum>(source: RouterRuleSource, type: T): source is RouterRuleSource & { type: T } | T {
     return (
         source === type ||
         (
@@ -497,11 +507,18 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
             }
         }
 
-        async function serviceWorkerFetch() {
+        async function serviceWorkerFetch(source: RouterSourceEnum | RouterFetchEventSource | RouterRaceNetworkAndFetchHandlerSource) {
             // TODO check if any fetch event handlers added.
             const fetch = fetchers.get(serviceWorker);
             ok(fetch, "Expected to find fetcher for service worker, internal state corrupt");
-            return fetch(clone(), init);
+            let resolvedInit = init;
+            if (typeof source === "object" && source.tag) {
+                resolvedInit = {
+                    ...init,
+                    tag: source.tag
+                }
+            }
+            return fetch(clone(), resolvedInit);
         }
 
         async function source(ruleSource: RouterRuleSource): Promise<Response | undefined> {
@@ -518,12 +535,12 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
                 return response;
             }
             if (isRouterSourceType(ruleSource, "fetch-event")) {
-                return serviceWorkerFetch();
+                return serviceWorkerFetch(ruleSource);
             }
             if (isRouterSourceType(ruleSource, "race-network-and-fetch-handler")) {
                 return Promise.race([
                     source("network"),
-                    serviceWorkerFetch()
+                    serviceWorkerFetch(ruleSource)
                 ]);
             }
             if (isRouterSourceType(ruleSource, "cache")) {

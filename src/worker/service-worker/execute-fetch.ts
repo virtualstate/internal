@@ -6,7 +6,11 @@ import type {FetchResponseMessage} from "./dispatch";
 import {DurableServiceWorkerRegistration, serviceWorker} from "./container";
 import {getOrigin} from "../../listen/config";
 
-export interface FetchInit extends RequestInit {
+export interface ServiceWorkerFetchOptions {
+    tag?: string;
+}
+
+export interface FetchInit extends RequestInit, ServiceWorkerFetchOptions {
     duplex?: "half";
 }
 
@@ -42,18 +46,20 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
         }
         return executeServiceWorkerFetch(
             registration,
-            request
+            request,
+            init
         );
     }
 }
 
-export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData) {
+export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData, options?: ServiceWorkerFetchOptions) {
     return executeServiceWorkerFetchEvent(registration, {
         type: "fetch",
         request: request instanceof Request ?
             await fromRequest(request) :
             request,
         virtual: true,
+        tag: options?.tag
     });
 }
 
@@ -78,26 +84,6 @@ export async function executeServiceWorkerFetchEvent(registration: DurableServic
         }
         return fromDurableResponse(message.response)
     }
-
-    function createBody(): undefined | BodyInit {
-        const stream = new ReadableStream({
-            async pull(controller) {
-                const message = await next();
-                if (!message) {
-                    return controller.close();
-                }
-                if (message.data) {
-                    controller.enqueue(message.data);
-                }
-            },
-            async cancel() {
-                await iterator.return?.();
-            }
-        });
-        ok<BodyInit>(stream);
-        return stream;
-    }
-
 
     async function next() {
         const { value, done } = await iterator.next();

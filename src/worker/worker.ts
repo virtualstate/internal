@@ -17,7 +17,7 @@ async function getDefaultNodeWorker(url: string, options: WorkerOptions): Promis
         worker.stderr.pipe(process.stderr);
     }
     return worker;
-};
+}
 
 export function getWorkerURLForImportURL(relative: string, url: string | URL) {
     const instance = new URL(url, getOrigin());
