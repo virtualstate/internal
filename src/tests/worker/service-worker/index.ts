@@ -1,13 +1,9 @@
-import {DurableServiceWorkerRegistration, serviceWorker} from "../../../worker/service-worker/container";
+import {serviceWorker} from "../../../worker/service-worker/container";
 import {dirname, join} from "node:path";
-import {executeServiceWorkerWorker, executeServiceWorkerWorkerMessage} from "../../../worker/service-worker/execute";
+import {executeServiceWorkerWorkerMessage} from "../../../worker/service-worker/execute";
 import {v4} from "uuid";
 import {caches} from "../../../fetch";
 import {ok} from "../../../is";
-import {
-    executeServiceWorkerFetch,
-    registerServiceWorkerFetch
-} from "../../../worker/service-worker/execute-fetch";
 import {fileURLToPath} from "node:url";
 import {createRouter, listRoutes} from "../../../worker/service-worker/router";
 
@@ -15,9 +11,6 @@ export {};
 
 const pathname = fileURLToPath(import.meta.url);
 const worker = join(dirname(pathname), "./worker.js");
-
-
-
 
 {
     const registration = await serviceWorker.register(worker);
@@ -49,27 +42,13 @@ const worker = join(dirname(pathname), "./worker.js");
 }
 
 {
-    const registration = await serviceWorker.register(worker);
+    const { fetch } = await serviceWorker.register(worker);
     const url = "https://example.com";
 
-    const response = await executeServiceWorkerFetch(registration, {
-        url
-    })
+    const response = await fetch(url)
 
     console.log(response.status);
     console.log(await response.text());
-}
-
-{
-    const fetch = await registerServiceWorkerFetch(worker);
-
-    {
-        const response = await fetch("https://example.com");
-        ok(response.ok);
-        console.log(await response.text());
-    }
-
-
 }
 
 {

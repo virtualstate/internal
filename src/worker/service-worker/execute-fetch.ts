@@ -3,7 +3,7 @@ import {DurableRequestData, fromDurableResponse, fromRequest, getFetchHeadersObj
 import {executeServiceWorkerWorker} from "./execute";
 import {isLike, ok} from "../../is";
 import type {FetchResponseMessage} from "./dispatch";
-import {DurableServiceWorkerRegistration, serviceWorker} from "./container";
+import type {DurableServiceWorkerRegistration} from "./container";
 import {getOrigin} from "../../listen/config";
 
 export interface ServiceWorkerFetchOptions {
@@ -16,11 +16,6 @@ export interface FetchInit extends RequestInit, ServiceWorkerFetchOptions {
 
 export interface FetchFn {
     (input: RequestInfo, init?: FetchInit): Promise<Response>
-}
-
-export async function registerServiceWorkerFetch(worker: string, options?: RegistrationOptions) {
-    const registration = await serviceWorker.register(worker, options);
-    return createServiceWorkerFetch(registration);
 }
 
 export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration): FetchFn {

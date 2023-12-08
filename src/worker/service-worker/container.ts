@@ -8,6 +8,7 @@ import {dispatchEvent} from "../../events";
 import {DurablePeriodicSyncManager} from "../../periodic-sync";
 import {getInternalStorageBucket, InternalBucket} from "../../storage-buckets/internal";
 import {getOrigin} from "../../listen";
+import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -159,6 +160,8 @@ export class DurableServiceWorkerRegistration {
     sync: DurableSyncManager;
     periodicSync: DurablePeriodicSyncManager;
 
+    fetch: FetchFn;
+
     public durable: DurableServiceWorkerRegistrationData;
     public readonly isCurrentGlobalScope: boolean;
 
@@ -174,6 +177,7 @@ export class DurableServiceWorkerRegistration {
         this.internalBucket = internalBucket;
         this.sync = new DurableSyncManager();
         this.periodicSync = new DurablePeriodicSyncManager();
+        this.fetch = createServiceWorkerFetch(this);
     }
 
     #onDurableDataEvent = (event: DurableEvent) => {

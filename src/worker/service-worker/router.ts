@@ -2,8 +2,8 @@ import {URLPattern} from "urlpattern-polyfill";
 import {getKeyValueStore} from "../../data";
 import {getServiceWorkerId} from "./service-worker-config";
 import {v4} from "uuid";
-import {DurableServiceWorkerRegistration, listServiceWorkers} from "./container";
-import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
+import type {DurableServiceWorkerRegistration} from "./container";
+import {FetchFn} from "./execute-fetch";
 import {ok} from "../../is";
 import {caches} from "../../fetch";
 
@@ -417,18 +417,8 @@ export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistr
     }
 }
 
-export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistration[]): Promise<FetchFn> {
-    const resolveServiceWorkers = serviceWorkers ?? await listServiceWorkers();
+export async function createRouter(serviceWorkers: DurableServiceWorkerRegistration[]): Promise<FetchFn> {
     const serviceWorkerRoutes = new Map<DurableServiceWorkerRegistration, RouterRule[]>();
-
-    const fetchers = new Map(
-        resolveServiceWorkers.map(
-            serviceWorker => [
-                serviceWorker,
-                createServiceWorkerFetch(serviceWorker)
-            ]
-        )
-    )
 
     async function listServiceWorkerRoutes(serviceWorker: DurableServiceWorkerRegistration) {
         const existing = serviceWorkerRoutes.get(serviceWorker);
@@ -441,7 +431,7 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
     }
 
     async function match(input: RequestInfo | URL, init?: RequestInit) {
-        for (const serviceWorker of resolveServiceWorkers) {
+        for (const serviceWorker of serviceWorkers) {
             const routes = await listServiceWorkerRoutes(serviceWorker);
             for (const route of routes) {
                 if (isRouteMatchCondition(serviceWorker, route, input, init)) {
@@ -509,7 +499,7 @@ export async function createRouter(serviceWorkers?: DurableServiceWorkerRegistra
 
         async function serviceWorkerFetch(source: RouterSourceEnum | RouterFetchEventSource | RouterRaceNetworkAndFetchHandlerSource) {
             // TODO check if any fetch event handlers added.
-            const fetch = fetchers.get(serviceWorker);
+            const { fetch } = serviceWorker;
             ok(fetch, "Expected to find fetcher for service worker, internal state corrupt");
             let resolvedInit = init;
             if (typeof source === "object" && source.tag) {
