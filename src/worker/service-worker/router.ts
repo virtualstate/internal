@@ -426,13 +426,20 @@ export async function createRouter(serviceWorkers: DurableServiceWorkerRegistrat
             return existing;
         }
         const routes = await listRoutes(serviceWorker.durable.serviceWorkerId);
-        serviceWorkerRoutes.set(serviceWorker, routes);
+        if (routes.length) {
+            serviceWorkerRoutes.set(serviceWorker, routes);
+        }
         return routes;
     }
 
     async function match(input: RequestInfo | URL, init?: RequestInit) {
         for (const serviceWorker of serviceWorkers) {
             const routes = await listServiceWorkerRoutes(serviceWorker);
+
+            if (serviceWorkers.length === 1 && !routes.length) {
+                // TODO install worker
+            }
+
             for (const route of routes) {
                 if (isRouteMatchCondition(serviceWorker, route, input, init)) {
                     return {

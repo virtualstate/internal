@@ -1,7 +1,6 @@
 import {FetchEvent} from "../../../fetch";
-import {isRouteMatchCondition, RouterRule, URLPatternInit} from "../../../worker/service-worker/router";
+import {RouterRule, URLPatternInit} from "../../../worker/service-worker/router";
 import {DurableServiceWorkerScope} from "../../../worker/service-worker/types";
-import {URLPattern} from "urlpattern-polyfill";
 
 declare var self: DurableServiceWorkerScope;
 
@@ -45,22 +44,27 @@ function addRequestMethodRouteAndHandler(
     urlPattern: string | URLPatternInit,
     onRequest: OnRequestFn
 ) {
+    const condition = [
+        {
+            requestMethod
+        },
+        {
+            urlPattern
+        }
+    ];
+    const tag = `${requestMethod}:${JSON.stringify(urlPattern)}`;
     const rule: RouterRule = {
-        condition: [
-            {
-                requestMethod
-            },
-            {
-                urlPattern
-            }
-        ],
-        source: "fetch-event"
+        condition,
+        source: {
+            type: "fetch-event",
+            tag
+        }
     }
     self.addEventListener("install", event => {
         event.addRoutes(rule)
     });
     self.addEventListener("fetch", event => {
-        if (isRouteMatchCondition(self.registration, rule, event.request)) {
+        if (event.tag === tag) {
             event.waitUntil(intercept());
         }
 
