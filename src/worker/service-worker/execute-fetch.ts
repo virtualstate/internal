@@ -28,7 +28,10 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
                 typeof input === "string" ?
                     new URL(input, getOrigin()).toString() :
                     input,
-                init
+                {
+                    duplex: "half",
+                    ...init,
+                }
             );
         } else {
             request = {

@@ -70,3 +70,4 @@ const worker = join(dirname(pathname), "./worker.js");
 }
 
 await import("./routes.test");
+await import("./chain");
