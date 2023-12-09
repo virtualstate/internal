@@ -70,3 +70,8 @@ ok(secondUserKey);
 ok(thirdUserKey);
 ok(companyKey);
 ok(!userCompanyKey);
+
+const companyHead = await store.head(companyUrl);
+companyHead.forEach((value, key) => {
+    console.log("Company Header", key, value);
+})

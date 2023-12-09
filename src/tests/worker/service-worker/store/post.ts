@@ -8,7 +8,8 @@ requestMethod.post({ pathname: "/:type" }, async request => {
     url.pathname = `${url.pathname}/${id}`;
     await cache.put(url, new Response(request.body, {
         headers: {
-            "Content-Type": request.headers.get("Content-Type")
+            "Content-Type": request.headers.get("Content-Type"),
+            "Last-Modified": new Date().toUTCString()
         }
     }));
     return new Response(null, {

@@ -4,7 +4,7 @@ import {DurableServiceWorkerScope} from "../../../worker/service-worker/types";
 
 declare var self: DurableServiceWorkerScope;
 
-export type RouterRequestMethodLower = "get" | "put" | "post" | "delete" | "options" | "patch"
+export type RouterRequestMethodLower = "get" | "put" | "post" | "delete" | "options" | "patch" | "head"
 
 export interface OnRequestFn {
     (request: Request, event: FetchEvent): Response | undefined | void | Promise<Response | undefined | void>
@@ -23,7 +23,8 @@ function makeRequestMethod(): Record<RouterRequestMethodLower, AddRouteAndHandle
         put: makeAddRequestMethodRouteAndHandler("put"),
         post: makeAddRequestMethodRouteAndHandler("post"),
         delete: makeAddRequestMethodRouteAndHandler("delete"),
-        options: makeAddRequestMethodRouteAndHandler("options")
+        options: makeAddRequestMethodRouteAndHandler("options"),
+        head: makeAddRequestMethodRouteAndHandler("head")
     }
 }
 

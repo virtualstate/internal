@@ -17,8 +17,13 @@ requestMethod.patch({ pathname: "/:type/:id" }, async request => {
             ...before,
             ...update
         };
-        await cache.put(request.url, Response.json(after));
-        return Response.json(after);
+        const response = Response.json(after, {
+            headers: {
+                "Last-Modified": new Date().toUTCString()
+            }
+        })
+        await cache.put(request.url, response.clone());
+        return response;
     } else {
         console.log(match.headers, request.headers)
         return new Response("Unable to patch non JSON content", {

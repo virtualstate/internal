@@ -61,7 +61,11 @@ export const store = {
         ok(response.ok);
         return response.json();
     },
-    async head(urlOrType?: string) {
-
+    async head(url: string) {
+        const response = await fetch(url, {
+            method: "head"
+        });
+        ok(response.ok);
+        return response.headers;
     }
 }
