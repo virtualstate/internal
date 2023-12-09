@@ -16,6 +16,7 @@ const fetch: FetchFn = async (input, init) => {
 }
 
 export const store = {
+    fetch,
     async post(type: string, value: unknown) {
         const response = await fetch(`/${type}`, {
             method: "post",
