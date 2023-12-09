@@ -1,47 +1,47 @@
-import { store } from "./register";
+import {json, text} from "./register";
 import { Chance } from "chance";
 import {ok} from "../../../../is";
 
 const chance  = new Chance();
 
 console.log("Creating user");
-const userUrl = await store.post("user", {
+const userUrl = await json.post("user", {
     name: chance.name()
 });
 console.log({ userUrl });
 
-const user = await store.get(userUrl);
+const user = await json.get(userUrl);
 console.log({ user });
 
-await store.put(userUrl, {
+await json.put(userUrl, {
     ...user,
     someDate: chance.date().toISOString()
 });
 
-const updatedUser = await store.get(userUrl);
+const updatedUser = await json.get(userUrl);
 console.log({ updatedUser });
 
-await store.patch(userUrl, {
+await json.patch(userUrl, {
     someOtherDate: chance.date().toISOString()
 });
 
-const patchedUser = await store.get(userUrl);
+const patchedUser = await json.get(userUrl);
 console.log({ patchedUser });
 
-const secondUserUrl = await store.post("user", {
+const secondUserUrl = await json.post("user", {
     name: chance.name()
 })
-const thirdUserUrl = await store.post("user", {
+const thirdUserUrl = await json.post("user", {
     name: chance.name()
 });
 
-const companyUrl = await store.post("company", {
+const companyUrl = await json.post("company", {
     name: chance.company()
 });
 
-const allKeys = await store.get()
-const userKeys = await store.get("user");
-const companyKeys = await store.get("company");
+const allKeys = await json.get()
+const userKeys = await json.get("user");
+const companyKeys = await json.get("company");
 
 console.log({
     allKeys,
@@ -71,7 +71,15 @@ ok(thirdUserKey);
 ok(companyKey);
 ok(!userCompanyKey);
 
-const companyHead = await store.head(companyUrl);
+const companyHead = await json.head(companyUrl);
 companyHead.forEach((value, key) => {
     console.log("Company Header", key, value);
 })
+
+
+const noteUrl = await text.post("note", "Initial text note");
+
+await text.put(noteUrl, "Updated note text");
+
+console.log(await text.head(noteUrl));
+console.log(await text.get(noteUrl));

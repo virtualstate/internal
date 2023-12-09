@@ -3,10 +3,9 @@ import {fileURLToPath} from "node:url";
 import {dirname, join} from "node:path";
 import {ok} from "../../../../is";
 
-
 let registration: DurableServiceWorkerRegistration | undefined = undefined;
 
-const fetch: FetchFn = async (input, init) => {
+export const fetch: FetchFn = async (input, init) => {
     if (!registration) {
         const pathname = fileURLToPath(import.meta.url);
         const path = join(dirname(pathname), "./store.js");
@@ -15,8 +14,7 @@ const fetch: FetchFn = async (input, init) => {
     return registration.fetch(input, init)
 }
 
-export const store = {
-    fetch,
+export const json = {
     async post(type: string, value: unknown) {
         const response = await fetch(`/${type}`, {
             method: "post",
@@ -61,6 +59,51 @@ export const store = {
         });
         ok(response.ok);
         return response.json();
+    },
+    async head(url: string) {
+        const response = await fetch(url, {
+            method: "head"
+        });
+        ok(response.ok);
+        return response.headers;
+    }
+}
+
+
+export const text = {
+    async post(type: string, value: string) {
+        const response = await fetch(`/${type}`, {
+            method: "post",
+            body: value,
+            headers: {
+                "Content-Type": "text/plain"
+            }
+        });
+        ok(response.ok);
+        return response.headers.get("Location");
+    },
+    async put(url: string, value: string) {
+        const response = await fetch(url, {
+            method: "put",
+            body: value,
+            headers: {
+                "Content-Type": "text/plain"
+            }
+        });
+        ok(response.ok);
+    },
+    async delete(url: string) {
+        const response = await fetch(url, {
+            method: "delete"
+        });
+        ok(response.ok);
+    },
+    async get(urlOrType?: string) {
+        const response = await fetch(urlOrType || "/", {
+            method: "get"
+        });
+        ok(response.ok);
+        return response.text();
     },
     async head(url: string) {
         const response = await fetch(url, {
