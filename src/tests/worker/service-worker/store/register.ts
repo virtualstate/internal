@@ -14,102 +14,98 @@ export const fetch: FetchFn = async (input, init) => {
     return registration.fetch(input, init)
 }
 
-export const json = {
-    async post(type: string, value: unknown) {
+export type FetchStoreRecordType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
+export type FetchStoreRecordTypeType<T extends FetchStoreRecordType> = Awaited<ReturnType<Response[T]>>
+
+interface FetchStoreOptions<RecordType extends FetchStoreRecordType> {
+    headers: Record<string, string>
+    type: RecordType;
+    body?(value: FetchStoreRecordTypeType<RecordType>): RequestInit["body"]
+}
+
+class FetchStore<RecordType extends FetchStoreRecordType, T extends FetchStoreRecordTypeType<RecordType> = FetchStoreRecordTypeType<RecordType>> {
+
+    constructor(private options: FetchStoreOptions<RecordType>) {
+    }
+
+    async post(type: string, value: T): Promise<string> {
         const response = await fetch(`/${type}`, {
             method: "post",
-            body: JSON.stringify(value),
+            body: this.options?.body?.(value) ?? value,
             headers: {
-                "Content-Type": "application/json"
+                ...this.options.headers
             }
         });
         ok(response.ok);
         return response.headers.get("Location");
-    },
-    async put(url: string, value: unknown) {
+    }
+
+    async put(url: string, value: T) {
         const response = await fetch(url, {
             method: "put",
-            body: JSON.stringify(value),
+            body: this.options?.body?.(value) ?? value,
             headers: {
-                "Content-Type": "application/json"
+                ...this.options.headers
             }
         });
         ok(response.ok);
-    },
-    async patch(url: string, value: unknown) {
+    }
+
+    async patch(url: string, value: T) {
         const response = await fetch(url, {
             method: "patch",
-            body: JSON.stringify(value),
+            body: this.options?.body?.(value) ?? value,
             headers: {
-                "Content-Type": "application/json"
+                ...this.options.headers
             }
         });
         ok(response.ok);
-        return response.json();
-    },
+    }
+
     async delete(url: string) {
         const response = await fetch(url, {
-            method: "delete"
+            method: "delete",
+            headers: {
+                ...this.options.headers
+            }
         });
         ok(response.ok);
-    },
-    async get(urlOrType?: string) {
+    }
+
+    async get(urlOrType?: string): Promise<T> {
         const response = await fetch(urlOrType || "/", {
-            method: "get"
+            method: "get",
+            headers: {
+                ...this.options.headers
+            }
         });
         ok(response.ok);
-        return response.json();
-    },
+        return response[this.options.type]();
+    }
+
     async head(url: string) {
         const response = await fetch(url, {
-            method: "head"
+            method: "head",
+            headers: {
+                ...this.options.headers
+            }
         });
         ok(response.ok);
         return response.headers;
     }
 }
 
+export const json = new FetchStore({
+    type: "json",
+    headers: {
+        "Content-Type": "application/json"
+    },
+    body: JSON.stringify
+})
 
-export const text = {
-    async post(type: string, value: string) {
-        const response = await fetch(`/${type}`, {
-            method: "post",
-            body: value,
-            headers: {
-                "Content-Type": "text/plain"
-            }
-        });
-        ok(response.ok);
-        return response.headers.get("Location");
-    },
-    async put(url: string, value: string) {
-        const response = await fetch(url, {
-            method: "put",
-            body: value,
-            headers: {
-                "Content-Type": "text/plain"
-            }
-        });
-        ok(response.ok);
-    },
-    async delete(url: string) {
-        const response = await fetch(url, {
-            method: "delete"
-        });
-        ok(response.ok);
-    },
-    async get(urlOrType?: string) {
-        const response = await fetch(urlOrType || "/", {
-            method: "get"
-        });
-        ok(response.ok);
-        return response.text();
-    },
-    async head(url: string) {
-        const response = await fetch(url, {
-            method: "head"
-        });
-        ok(response.ok);
-        return response.headers;
+export const text = new FetchStore({
+    type: "text",
+    headers: {
+        "Content-Type": "text/plain"
     }
-}
+})
