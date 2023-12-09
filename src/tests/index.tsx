@@ -1,11 +1,15 @@
 /* c8 ignore start */
 
+import { setMaxListeners } from "node:events";
+
 import * as dotenv from "dotenv";
 
 dotenv.config();
 
 import why from "why-is-node-still-running";
 import {isRedis} from "../data";
+
+setMaxListeners(Number.MAX_SAFE_INTEGER);
 
 declare var Bun: unknown;
 

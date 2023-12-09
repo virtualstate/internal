@@ -5,7 +5,7 @@ const { a } = await register();
 const responseA = await a.fetch("/", {
     method: "POST",
     body: JSON.stringify({
-        limit: 10 + Math.round(Math.random() * 10)
+        limit: 3 + Math.round(Math.random() * 6)
     })
 });
 

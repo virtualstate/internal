@@ -73,6 +73,7 @@ try {
     await import("./routes.test");
     await import("./chain");
     await import("./loop");
+    await import("./store");
 } catch (e) {
     console.error(e);
     process.exit(1);
