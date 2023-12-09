@@ -1,4 +1,4 @@
-import {json, text} from "./register";
+import {blob, formData, json, text} from "./register";
 import { Chance } from "chance";
 import {ok} from "../../../../is";
 
@@ -83,3 +83,19 @@ await text.put(noteUrl, "Updated note text");
 
 console.log(await text.head(noteUrl));
 console.log(await text.get(noteUrl));
+
+const data = new FormData();
+data.append("name", chance.name());
+data.append("blob", new Blob([], { type: "text/csv" }));
+data.append("message", chance.paragraph());
+
+const submittedUrl = await formData.post("feedback", data);
+
+const submittedData = await formData.get(submittedUrl);
+console.log(submittedData);
+
+const submittedBlobUrl = await blob.post("file", new Blob([
+    Buffer.from(JSON.stringify("hello"))
+], { type: "application/json" }));
+const submittedBlob = await blob.get(submittedBlobUrl);
+console.log(submittedBlob);

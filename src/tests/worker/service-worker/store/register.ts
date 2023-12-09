@@ -18,12 +18,13 @@ export type FetchStoreRecordType = "json" | "text" | "blob" | "arrayBuffer" | "f
 export type FetchStoreRecordTypeType<T extends FetchStoreRecordType> = Awaited<ReturnType<Response[T]>>
 
 interface FetchStoreOptions<RecordType extends FetchStoreRecordType> {
-    headers: Record<string, string>
+    headers?: Record<string, string>
     type: RecordType;
     body?(value: FetchStoreRecordTypeType<RecordType>): RequestInit["body"]
+    fetch: FetchFn;
 }
 
-class FetchStore<RecordType extends FetchStoreRecordType, T extends FetchStoreRecordTypeType<RecordType> = FetchStoreRecordTypeType<RecordType>> {
+export class FetchStore<RecordType extends FetchStoreRecordType, T extends FetchStoreRecordTypeType<RecordType> = FetchStoreRecordTypeType<RecordType>> {
 
     constructor(private options: FetchStoreOptions<RecordType>) {
     }
@@ -100,12 +101,24 @@ export const json = new FetchStore({
     headers: {
         "Content-Type": "application/json"
     },
-    body: JSON.stringify
+    body: JSON.stringify,
+    fetch
 })
 
 export const text = new FetchStore({
     type: "text",
     headers: {
         "Content-Type": "text/plain"
-    }
+    },
+    fetch
+})
+
+export const formData = new FetchStore({
+    type: "formData",
+    fetch
+})
+
+export const blob = new FetchStore({
+    type: "blob",
+    fetch
 })
