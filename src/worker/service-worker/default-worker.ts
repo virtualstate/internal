@@ -68,21 +68,13 @@ try {
         try {
             await onServiceWorkerMessage(message);
         } catch (error) {
-            // console.error("worker error", error);
+            console.error("worker error", error);
             postMessage(WORKER_ERROR);
             break;
         }
 
         // console.log("Breaking worker!");
         postMessage(WORKER_BREAK);
-    }
-
-    function postMessage(message: unknown) {
-        try {
-            workerData.postMessage(message, listTransferable(message));
-        } catch (error) {
-            console.error("Failed to postMessage");
-        }
     }
 
     async function onServiceWorkerMessage(message: ServiceWorkerWorkerData) {
@@ -101,5 +93,15 @@ try {
 
 } catch (error) {
     console.error("Error in worker", error)
+    postMessage(WORKER_ERROR);
 }
 
+
+
+function postMessage(message: unknown) {
+    try {
+        workerData.postMessage(message, listTransferable(message));
+    } catch (error) {
+        console.error("Failed to postMessage");
+    }
+}

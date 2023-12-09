@@ -69,5 +69,11 @@ const worker = join(dirname(pathname), "./worker.js");
 
 }
 
-await import("./routes.test");
-await import("./chain");
+try {
+    await import("./routes.test");
+    await import("./chain");
+    await import("./loop");
+} catch (e) {
+    console.error(e);
+    process.exit(1);
+}

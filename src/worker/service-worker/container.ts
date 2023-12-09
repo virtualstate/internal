@@ -301,7 +301,8 @@ export class DurableServiceWorkerContainer {
 
     async getRegistration(clientUrl?: string) {
         ok(clientUrl, "Default client url not supported, please provide a client url to get");
-        const serviceWorkerId = getServiceWorkerId(clientUrl);
+        const instance = new URL(clientUrl, getServiceWorkerUrl());
+        const serviceWorkerId = getServiceWorkerId(instance.toString());
         return getDurableServiceWorkerRegistration(this.internalBucket, serviceWorkerId);
     }
 
