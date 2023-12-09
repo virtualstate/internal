@@ -52,7 +52,7 @@ export class FetchStore<RecordType extends FetchStoreRecordType, T extends Fetch
         ok(response.ok);
     }
 
-    async patch(url: string, value: T) {
+    async patch<Z extends T = T>(url: string, value: T): Promise<Z> {
         const response = await fetch(url, {
             method: "patch",
             body: this.options?.body?.(value) ?? value,
@@ -61,6 +61,7 @@ export class FetchStore<RecordType extends FetchStoreRecordType, T extends Fetch
             }
         });
         ok(response.ok);
+        return response[this.options.type]()
     }
 
     async delete(url: string) {
@@ -73,7 +74,7 @@ export class FetchStore<RecordType extends FetchStoreRecordType, T extends Fetch
         ok(response.ok);
     }
 
-    async get(urlOrType?: string): Promise<T> {
+    async get<Z extends T = T>(urlOrType?: string): Promise<Z> {
         const response = await fetch(urlOrType || "/", {
             method: "get",
             headers: {
@@ -120,5 +121,10 @@ export const formData = new FetchStore({
 
 export const blob = new FetchStore({
     type: "blob",
+    fetch
+})
+
+export const arrayBuffer = new FetchStore({
+    type: "arrayBuffer",
     fetch
 })

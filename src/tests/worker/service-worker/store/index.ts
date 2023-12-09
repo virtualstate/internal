@@ -1,4 +1,4 @@
-import {blob, formData, json, text} from "./register";
+import {arrayBuffer, blob, formData, json, text} from "./register";
 import { Chance } from "chance";
 import {ok} from "../../../../is";
 
@@ -94,8 +94,14 @@ const submittedUrl = await formData.post("feedback", data);
 const submittedData = await formData.get(submittedUrl);
 console.log(submittedData);
 
+const encoder = new TextEncoder();
+
 const submittedBlobUrl = await blob.post("file", new Blob([
-    Buffer.from(JSON.stringify("hello"))
+    encoder.encode(JSON.stringify("hello"))
 ], { type: "application/json" }));
 const submittedBlob = await blob.get(submittedBlobUrl);
 console.log(submittedBlob);
+
+const submittedArrayBufferUrl = await arrayBuffer.post("file", encoder.encode(JSON.stringify("hello")).buffer);
+const submittedArrayBuffer = await arrayBuffer.get(submittedArrayBufferUrl);
+console.log(submittedArrayBuffer);
