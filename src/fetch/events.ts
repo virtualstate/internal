@@ -3,6 +3,7 @@ import {on} from "../events";
 import {isLike, ok} from "../is";
 import {FetchRespondWith} from "./dispatch";
 import {isMainThread} from "node:worker_threads";
+import {isServiceWorker} from "../worker/service-worker/config";
 
 export const FETCH = "fetch" as const;
 type ScheduleFetchEventType = typeof FETCH;
@@ -44,7 +45,7 @@ function isFetchEvent(event: unknown): event is FetchEvent {
 
 export let removeFetchScheduledFunction = () => {};
 
-if (isMainThread) {
+if (isMainThread && !isServiceWorker()) {
     removeFetchScheduledFunction = on(FETCH, async (event) => {
         console.log("FETCHING!");
         ok(isFetchEvent(event));

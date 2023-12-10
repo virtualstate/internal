@@ -84,17 +84,18 @@ await text.put(noteUrl, "Updated note text");
 console.log(await text.head(noteUrl));
 console.log(await text.get(noteUrl));
 
+const encoder = new TextEncoder();
+
 const data = new FormData();
 data.append("name", chance.name());
 data.append("blob", new Blob([], { type: "text/csv" }));
+data.append("file", new File([encoder.encode(JSON.stringify("hello"))], "file.json"));
 data.append("message", chance.paragraph());
 
 const submittedUrl = await formData.post("feedback", data);
 
 const submittedData = await formData.get(submittedUrl);
 console.log(submittedData);
-
-const encoder = new TextEncoder();
 
 const submittedBlobUrl = await blob.post("file", new Blob([
     encoder.encode(JSON.stringify("hello"))

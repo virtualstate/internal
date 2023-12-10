@@ -30,7 +30,7 @@ export class FetchStore<RecordType extends FetchStoreRecordType, T extends Fetch
     }
 
     async post(type: string, value: T): Promise<string> {
-        const response = await fetch(`/${type}`, {
+        const response = await fetch(type, {
             method: "post",
             body: this.options?.body?.(value) ?? value,
             headers: {

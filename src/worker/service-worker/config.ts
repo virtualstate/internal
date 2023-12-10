@@ -1,5 +1,5 @@
-import {SERVICE_WORKER_ID} from "../../config";
+import {SERVICE_WORKER_URL} from "../../config";
 
 export function isServiceWorker() {
-    return SERVICE_WORKER_ID
+    return SERVICE_WORKER_URL
 }

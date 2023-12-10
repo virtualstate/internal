@@ -1,10 +1,6 @@
 import {requestMethod} from "../routes.example";
 import {cache} from "./cache";
-
-function isMaybeJSONContentType({ headers }: { headers: Headers }) {
-    if (!headers.has("Content-Type")) return true;
-    return headers.get("Content-Type") === "application/json";
-}
+import {isMaybeJSONContentType} from "./is";
 
 requestMethod.patch({ pathname: "/:type/:id" }, async request => {
     const match = await cache.match(request.url);

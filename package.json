@@ -180,7 +180,7 @@
     "@types/jest": "^27.0.1",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/mkdirp": "^1.0.2",
-    "@types/node": "^20.2.5",
+    "@types/node": "^20.6.0",
     "@types/nodemailer": "^6.4.8",
     "@types/nodemailer-mailgun-transport": "^1.4.3",
     "@types/react": "^18.2.9",

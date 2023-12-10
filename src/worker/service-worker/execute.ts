@@ -120,7 +120,7 @@ export async function createServiceWorkerWorker(): Promise<Pushable<ServiceWorke
         try {
             worker.postMessage(message, transfer);
         } catch (error) {
-            console.error("Could not post error to worker");
+            console.error("Could not post error to worker", error);
             pushError(error);
         }
 

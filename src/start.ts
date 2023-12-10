@@ -1,4 +1,5 @@
 import {Config, getConfig, withConfig} from "./config";
+import {isServiceWorker} from "./worker/service-worker/config";
 
 export async function start(config?: Partial<Config>): Promise<() => Promise<void>> {
     if (config) {
@@ -9,12 +10,18 @@ export async function start(config?: Partial<Config>): Promise<() => Promise<voi
     await import("./dispatch");
 
     const tracing = await import("./tracing");
-    const listen = await import("./listen/main");
-    const worker = await import("./worker/service-worker/main");
+    let listen: { close(): Promise<void> } | undefined,
+        worker: { close(): Promise<void> } | undefined;
+
+    if (isServiceWorker()) {
+        worker = await import("./worker/service-worker/main");
+    } else {
+        listen = await import("./listen/main");
+    }
 
     return async function close() {
-        await listen.close();
         await tracing.shutdown();
-        await worker.close();
+        await listen?.close();
+        await worker?.close();
     }
 }

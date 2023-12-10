@@ -16,6 +16,7 @@ import {
 } from "../../data";
 import {limited} from "../../limited";
 import {isSignalled} from "../../is";
+import {SERVICE_WORKER_URL} from "../../config";
 
 export interface BackgroundScheduleOptions extends ScheduledFunctionOptions {
 
@@ -83,8 +84,12 @@ export async function dispatchScheduledDurableEvents(options: BackgroundSchedule
 
         let isMainThread = true;
         if (event.serviceWorkerId) {
-            const threads = await import("node:worker_threads");
-            isMainThread = threads.isMainThread;
+            if (SERVICE_WORKER_URL) {
+                isMainThread = false;
+            } else {
+                const threads = await import("node:worker_threads");
+                isMainThread = threads.isMainThread;
+            }
         }
         const done = isMainThread ?
             await lock(`dispatchEvent:${event.type}:${event.durableEventId || "no-event-id"}`) :
