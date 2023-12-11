@@ -9,6 +9,7 @@ import {DurablePeriodicSyncManager} from "../../periodic-sync";
 import {getInternalStorageBucket, InternalBucket} from "../../storage-buckets/internal";
 import {getOrigin} from "../../listen";
 import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
+import {SERVICE_WORKER_ID, SERVICE_WORKER_URL} from "../../config";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -263,7 +264,8 @@ export class DurableServiceWorkerContainer {
         const instance = new URL(url, getServiceWorkerUrl());
         ok(instance.protocol === "file:", "Only file service workers supported at this time");
         const store = getServiceWorkerRegistrationStore(this.internalBucket);
-        const serviceWorkerId = getServiceWorkerId(instance.toString());
+        const envId = url === SERVICE_WORKER_URL ? SERVICE_WORKER_ID : undefined;
+        const serviceWorkerId = envId ?? getServiceWorkerId(instance.toString());
         const existing = await store.get(serviceWorkerId);
         if (existing) {
             const instance = new DurableServiceWorkerRegistration(existing);

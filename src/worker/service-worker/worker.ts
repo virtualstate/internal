@@ -49,6 +49,9 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         removeEventListener
     });
 
+
+    await import("./dispatchers");
+
     await import(registration.durable.url);
 
     if (registration.durable.registrationState === "pending" || registration.durable.registrationState === "installing") {

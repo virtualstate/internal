@@ -1,6 +1,4 @@
 import {isServiceWorker} from "./config";
-import {Pushable} from "./execute";
-import {ServiceWorkerWorkerData} from "./worker";
 
 export let close = async () => {};
 
