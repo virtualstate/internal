@@ -15,7 +15,7 @@ export interface FetchInit extends RequestInit, ServiceWorkerFetchOptions {
 }
 
 export interface FetchFn {
-    (input: RequestInfo, init?: FetchInit): Promise<Response>
+    (input: RequestInfo | URL, init?: FetchInit): Promise<Response>
 }
 
 export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration): FetchFn {

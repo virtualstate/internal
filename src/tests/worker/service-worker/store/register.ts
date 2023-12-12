@@ -17,80 +17,116 @@ export const fetch: FetchFn = async (input, init) => {
 export type FetchStoreRecordType = "json" | "text" | "blob" | "arrayBuffer" | "formData";
 export type FetchStoreRecordTypeType<T extends FetchStoreRecordType> = Awaited<ReturnType<Response[T]>>
 
-interface FetchStoreOptions<RecordType extends FetchStoreRecordType> {
-    headers?: Record<string, string>
+type FetchStoreRequestInit = Omit<RequestInit, "body" | "method">
+
+interface FetchStoreBodyFn<RecordType extends FetchStoreRecordType> {
+    (value: FetchStoreRecordTypeType<RecordType>): RequestInit["body"]
+}
+
+interface FetchStoreOptions<RecordType extends FetchStoreRecordType> extends FetchStoreRequestInit {
     type: RecordType;
-    body?(value: FetchStoreRecordTypeType<RecordType>): RequestInit["body"]
     fetch: FetchFn;
+    body?: FetchStoreBodyFn<RecordType>
+}
+
+function mergeHeaders(...items: HeadersInit[]) {
+    const headers = new Headers(items[0]);
+    for (let index = 1; index < items.length; index += 1) {
+        const item = items[index];
+        if (!item) continue;
+        const next = new Headers(item);
+        next.forEach((value, key) => {
+           headers.set(key, value);
+        });
+    }
+    return headers;
 }
 
 export class FetchStore<RecordType extends FetchStoreRecordType, T extends FetchStoreRecordTypeType<RecordType> = FetchStoreRecordTypeType<RecordType>> {
 
-    constructor(private options: FetchStoreOptions<RecordType>) {
+    readonly type: RecordType;
+
+    private readonly fetch: FetchFn;
+    private readonly body: FetchStoreBodyFn<RecordType> | undefined;
+    private readonly init: FetchStoreRequestInit;
+
+    constructor({ type, body, fetch, ...init }: FetchStoreOptions<RecordType>) {
+        this.type = type;
+        this.body = body;
+        this.fetch = fetch;
+        this.init = init;
     }
 
-    async post(type: string, value: T): Promise<string> {
+    with<Z extends T>(options: Partial<Omit<FetchStoreOptions<RecordType>, "type">>) {
+        return new FetchStore<RecordType, Z>({
+            type: this.type,
+            body: this.body,
+            fetch: this.fetch,
+            ...options
+        })
+    }
+
+    async post(type: string | URL, value: T, init?: FetchStoreRequestInit): Promise<string> {
         const response = await fetch(type, {
+            ...this.init,
+            ...init,
             method: "post",
-            body: this.options?.body?.(value) ?? value,
-            headers: {
-                ...this.options.headers
-            }
+            body: this.body?.(value) ?? value,
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
         return response.headers.get("Location");
     }
 
-    async put(url: string, value: T) {
+    async put(url: string | URL, value: T, init?: FetchStoreRequestInit) {
         const response = await fetch(url, {
+            ...this.init,
+            ...init,
             method: "put",
-            body: this.options?.body?.(value) ?? value,
-            headers: {
-                ...this.options.headers
-            }
+            body: this.body?.(value) ?? value,
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
     }
 
-    async patch<Z extends T = T>(url: string, value: T): Promise<Z> {
+    async patch<Z extends T = T>(url: string | URL, value: T, init?: FetchStoreRequestInit): Promise<Z> {
         const response = await fetch(url, {
+            ...init,
             method: "patch",
-            body: this.options?.body?.(value) ?? value,
-            headers: {
-                ...this.options.headers
-            }
+            body: this.body?.(value) ?? value,
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
-        return response[this.options.type]()
+        return response[this.type]()
     }
 
-    async delete(url: string) {
+    async delete(url: string, init?: FetchStoreRequestInit) {
         const response = await fetch(url, {
+            ...this.init,
+            ...init,
             method: "delete",
-            headers: {
-                ...this.options.headers
-            }
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
     }
 
-    async get<Z extends T = T>(urlOrType?: string): Promise<Z> {
+    async get<Z extends T = T>(urlOrType?: string | URL, init?: FetchStoreRequestInit): Promise<Z> {
         const response = await fetch(urlOrType || "/", {
+            ...this.init,
+            ...init,
             method: "get",
-            headers: {
-                ...this.options.headers
-            }
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
-        return response[this.options.type]();
+        return response[this.type]();
     }
 
-    async head(url: string) {
+    async head(url: string | URL, init?: FetchStoreRequestInit) {
         const response = await fetch(url, {
+            ...this.init,
+            ...init,
             method: "head",
-            headers: {
-                ...this.options.headers
-            }
+            headers: mergeHeaders(this.init.headers, init?.headers)
         });
         ok(response.ok);
         return response.headers;
