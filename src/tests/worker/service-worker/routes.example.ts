@@ -60,6 +60,7 @@ function addRequestMethodRouteAndHandler(
             tag
         }
     };
+
     self.addEventListener("install", event => {
         event.addRoutes(route)
     });

@@ -11,14 +11,13 @@ import {FetchResponseMessage} from "../dispatch";
 
 async function importConfigModule(url: string) {
     const configModule = await import(url);
-
     if (isLike<{ config?: Config }>(configModule) && configModule.config) {
         return configModule.config
     } else if (isLike<{ default?: Config }>(configModule) && configModule.default) {
         return configModule.default;
     }
-
-    throw new Error(`Expected config to exported as default or named export "config" from ${url}, got keys ${Object.keys(configModule)}`)
+    const keys = Object.keys(configModule);
+    throw new Error(`Expected config to exported as default or named export "config" from ${url}, got keys ${keys}`)
 }
 
 interface ServiceWorkerEventFn {
@@ -87,7 +86,7 @@ async function initialiseServices(config: Config) {
         const registration = await serviceWorker.register(url)
         const context: ServiceWorkerContext = {
             registration,
-            activated: activateService(registration)
+            activated: activateService(registration, service)
         }
         const contextPromise = Promise.resolve(context);
         namedServices[registration.durable.serviceWorkerId] = contextPromise;
@@ -97,10 +96,12 @@ async function initialiseServices(config: Config) {
         return context;
     }
 
-    async function activateService(registration: DurableServiceWorkerRegistration) {
+    async function activateService(registration: DurableServiceWorkerRegistration, service: Service) {
         const worker = await createServiceWorkerWorker();
         await worker.push({
-            serviceWorkerId: registration.durable.serviceWorkerId
+            serviceWorkerId: registration.durable.serviceWorkerId,
+            config,
+            service
         });
         let queue: Promise<void> | undefined = undefined;
         return async (event: DurableEventData) => {

@@ -20,6 +20,7 @@ import {DurableEventData} from "../../data";
 import {MessagePort as NodeMessagePort, MessageChannel as NodeMessageChannel } from "node:worker_threads";
 import {dispatchWorkerEvent} from "./dispatch";
 import {getInternalStorageBucket} from "../../storage-buckets/internal";
+import {Config, Service} from "./configure/types";
 
 export interface ServiceWorkerWorkerData {
     serviceWorkerId: string;
@@ -27,6 +28,8 @@ export interface ServiceWorkerWorkerData {
     port?: NodeMessagePort;
     channel?: NodeMessageChannel;
     context?: Record<string, unknown[]>;
+    config?: Config;
+    service?: Service;
 }
 
 export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, internalBucket = getInternalStorageBucket()): Promise<DurableServiceWorkerRegistration> {
@@ -46,7 +49,8 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         isSecureContext: protocol === "https:",
         origin: origin || getOrigin(),
         addEventListener,
-        removeEventListener
+        removeEventListener,
+        fetch: createServiceWorkerFetch(data)
     });
 
     await import("./dispatchers");
@@ -110,5 +114,37 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
                 virtual: true
             }
         );
+    }
+}
+
+function createServiceWorkerFetch({ config, service }: ServiceWorkerWorkerData, globalFetch = fetch): typeof fetch {
+
+    if (!(config && service?.bindings)) {
+        return globalFetch;
+    }
+
+    const protocolBindings = service.bindings.filter(({ protocol }) => protocol);
+
+    if (!protocolBindings.length) {
+        return globalFetch;
+    }
+
+    function getURL(input: URL | RequestInfo) {
+        if (input instanceof URL) {
+            return input;
+        }
+        if (typeof input === "string") {
+            return new URL(input);
+        }
+        return new URL(input.url);
+    }
+
+    return async function serviceWorkerFetch(input, init) {
+        const url = getURL(input);
+        const { protocol } = url;
+
+
+
+        return globalFetch(input, init)
     }
 }

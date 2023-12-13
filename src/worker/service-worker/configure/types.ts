@@ -19,7 +19,8 @@ export interface WorkerBindingTypeOptions extends WorkerBindingSourceOptions {
 }
 
 export interface WorkerBinding extends WorkerBindingTypeOptions {
-    name: string;
+    name?: string;
+    protocol?: string;
 }
 
 export interface WorkerOptions {
