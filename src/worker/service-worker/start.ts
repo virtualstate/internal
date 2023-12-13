@@ -9,6 +9,7 @@ import {dispatchEvent} from "../../events";
 import {ReadableStream} from "node:stream/web";
 import {Readable} from "node:stream";
 import {pipeline} from "node:stream/promises";
+import {importServiceWorker} from "./import";
 
 export interface WorkerStartOptions {
     id?: string;
@@ -33,12 +34,7 @@ export async function start(options: WorkerStartOptions = DEFAULT_OPTIONS) {
     const { url } = options;
     ok(url, "Expected SERVICE_WORKER_URL");
 
-    // Ensure registered
-    const registration = await serviceWorker.register(url);
-
-    await onServiceWorkerWorkerData({
-        serviceWorkerId: registration.durable.serviceWorkerId
-    })
+    const registration = await importServiceWorker(url);
 
     let close = async () => {};
 
@@ -61,7 +57,7 @@ function isServiceWorkerListen(options = DEFAULT_OPTIONS) {
     return isNumberString(DEFAULT_OPTIONS.listen.port)
 }
 
-async function listen({ id: serviceWorkerId, listen: { port, hostname, origin }}: WorkerStartOptions) {
+export async function listen({ id: serviceWorkerId, listen: { port, hostname, origin }}: WorkerStartOptions, dispatch = dispatchEvent) {
 
     const server = createServer(onServerMessage);
 
@@ -99,7 +95,7 @@ async function listen({ id: serviceWorkerId, listen: { port, hostname, origin }}
                 duplex: "half",
                 headers
             }
-            const eventPromise = dispatchEvent({
+            const eventPromise = dispatch({
                 type: "fetch",
                 request: new Request(new URL(incomingMessage.url, origin), init),
                 respondWith,

@@ -49,10 +49,11 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         removeEventListener
     });
 
-
     await import("./dispatchers");
 
-    await import(registration.durable.url);
+    const url = new URL(registration.durable.url, registration.durable.baseURL);
+    url.searchParams.set("importCacheBust", Date.now().toString());
+    await import(url.toString());
 
     if (registration.durable.registrationState === "pending" || registration.durable.registrationState === "installing") {
         try {
