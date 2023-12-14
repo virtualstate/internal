@@ -50,5 +50,7 @@ export const {
     MAIL_FROM,
     MAIL_SENDER,
     MAIL_REPLY_TO,
-    KV_CONNECT_URL
+    KV_CONNECT_URL,
+    DENO_KV_ACCESS_TOKEN,
+    KV_CONNECT_ACCESS_TOKEN = DENO_KV_ACCESS_TOKEN,
 } = process.env;

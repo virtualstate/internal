@@ -1,20 +1,45 @@
-import {KV_CONNECT_URL} from "../../config";
+import {KV_CONNECT_ACCESS_TOKEN, KV_CONNECT_URL} from "../../config";
 import {KeyValueStore, KeyValueStoreOptions, MetaKeyValueStore, MetaRecord} from "./types";
 import type {Kv} from "@deno/kv";
-import {openKv} from "@deno/kv";
 import {ok} from "../../is";
+import {getRedisUrl} from "./redis-client-helpers";
+
+
+const GLOBAL_CLIENTS = new Map();
+const GLOBAL_CLIENTS_PROMISE = new Map();
+const GLOBAL_CLIENT_CONNECTION_PROMISE = new WeakMap();
+
+const DEFAULT_SCAN_SIZE = 42;
+
+export function getGlobalKVConnectClient(): Promise<Kv> {
+    const url: string = KV_CONNECT_URL;
+    // Give a stable promise result so it can be used to cache on too
+    const existing = GLOBAL_CLIENTS_PROMISE.get(url);
+    if (existing) {
+        return existing;
+    }
+    const promise = getClient();
+    GLOBAL_CLIENTS_PROMISE.set(url, promise);
+    return promise;
+
+    async function getClient(): Promise<Kv> {
+        const { openKv } = await import("@deno/kv");
+        const client = openKv(KV_CONNECT_URL, {
+            accessToken: KV_CONNECT_ACCESS_TOKEN
+        })
+        // client.on("error", console.warn);
+        GLOBAL_CLIENTS.set(url, client);
+        return client;
+    }
+}
 
 export function isKVConnect() {
     return Boolean(KV_CONNECT_URL);
 }
 
 export function createKVConnectStore<T>(name: string, options?: KeyValueStoreOptions): KeyValueStore<T> {
-    let opened: Promise<Kv> | undefined = undefined;
     function open() {
-        if (opened) {
-            return opened;
-        }
-        return opened = openKv(KV_CONNECT_URL);
+        return getGlobalKVConnectClient();
     }
 
     const namespace = [name, options.prefix || false];
@@ -55,7 +80,10 @@ export function createKVConnectStore<T>(name: string, options?: KeyValueStoreOpt
             return values;
         },
         async clear(): Promise<void> {
-
+            const client = await open();
+            for await (const [key] of entries()) {
+                await client.delete([...namespace, key]);
+            }
         },
         async delete(key: string): Promise<void> {
             const client = await open();
@@ -90,6 +118,5 @@ export function createKVConnectStore<T>(name: string, options?: KeyValueStoreOpt
             ok(fn, "expected meta option to be provided if meta is used");
             return fn<M>(key);
         }
-
     }
 }

@@ -8,6 +8,7 @@ dotenv.config();
 
 import why from "why-is-node-still-running";
 import {isRedis} from "../data";
+import {isKVConnect} from "../data/storage/kv-connect";
 
 setMaxListeners(Number.MAX_SAFE_INTEGER);
 
@@ -26,7 +27,7 @@ try {
 
   // Redis is a stable store... need to replace the default local
   // store for workers, but that is a later task
-  if (isRedis() && typeof Bun === "undefined") {
+  if ((isRedis() || isKVConnect()) && typeof Bun === "undefined") {
     await import("./worker");
 
     await import("./readme");
