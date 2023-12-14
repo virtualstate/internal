@@ -49,5 +49,6 @@ export const {
     MAIL_MAILGUN_DOMAIN,
     MAIL_FROM,
     MAIL_SENDER,
-    MAIL_REPLY_TO
+    MAIL_REPLY_TO,
+    KV_CONNECT_URL
 } = process.env;

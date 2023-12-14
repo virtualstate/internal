@@ -969,6 +969,36 @@
   dependencies:
     "@jridgewell/trace-mapping" "0.3.9"
 
+"@deno/kv-darwin-arm64@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@deno/kv-darwin-arm64/-/kv-darwin-arm64-0.6.1.tgz#d9ab9138e00fdb895ac088517495e9bae2b6bc6b"
+  integrity sha512-lPaYoI4FUwAASAD4SC8E3Z4Xx8hJaCFOzuzuRxkn0TeQfW85L6wx+3WVKp7xBDmh3IztSxBZjTqJFQlWs+Fpvw==
+
+"@deno/kv-darwin-x64@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@deno/kv-darwin-x64/-/kv-darwin-x64-0.6.1.tgz#bf4808b1a6084abcb5484cc1f28656ce5075d9c5"
+  integrity sha512-CfA1R0wUDE0D1o4niaGMINLjrBiqc3K1LQ2P0yR9yPmhPv2SsyrAqPFkzOkFom1/d5B5xlPuy9HwMSYrhmNHMg==
+
+"@deno/kv-linux-x64-gnu@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@deno/kv-linux-x64-gnu/-/kv-linux-x64-gnu-0.6.1.tgz#df1dce4951e4245c7fbded962038038e2a0afb05"
+  integrity sha512-g/Ix9VIEpp9beBKVzSxu9nTk9WujbfOZedZ8wRKl6VBBesQu4VCg0X3zAw1bBTiDn7RsfBdMNQXBUCKWHp/JvQ==
+
+"@deno/kv-win32-x64-msvc@0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@deno/kv-win32-x64-msvc/-/kv-win32-x64-msvc-0.6.1.tgz#21c815feea15dd8afc01ec597a9b7cb2dcce8a84"
+  integrity sha512-6YcAh5YvcTz0XCZlY1psFpEeDrOzjUpysTbuLhYm0WtrK6iZ5mgm6ZI0R/pGA1pjhPG+DGU8BGF8Ws2wZiBfyA==
+
+"@deno/kv@^0.6.1":
+  version "0.6.1"
+  resolved "https://registry.yarnpkg.com/@deno/kv/-/kv-0.6.1.tgz#a471bcb0c962865ab991b7e7a3aa3cd6486a49f3"
+  integrity sha512-bsZhBTk4CFhS4lMZxHgPGd5cRgRpvxQOT4YEJbSwhKI9mX+iy6r8cB3LZoWsH0iueKkWHijToHGPBlTkiQ2R1A==
+  optionalDependencies:
+    "@deno/kv-darwin-arm64" "0.6.1"
+    "@deno/kv-darwin-x64" "0.6.1"
+    "@deno/kv-linux-x64-gnu" "0.6.1"
+    "@deno/kv-win32-x64-msvc" "0.6.1"
+
 "@deno/shim-crypto@~0.3.0":
   version "0.3.1"
   resolved "https://registry.yarnpkg.com/@deno/shim-crypto/-/shim-crypto-0.3.1.tgz#416155b2b6f9ad728f80ebcb422c803efc1023c2"

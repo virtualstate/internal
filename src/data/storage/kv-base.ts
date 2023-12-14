@@ -8,6 +8,7 @@ import {isLike, ok} from "../../is";
 import {isRedis} from "./redis-client-helpers";
 import {getConfig} from "../../config";
 import {addKeyValueStoreIndex, deleteKeyValueStoreIndex} from "./store-index";
+import {createKVConnectStore, isKVConnect} from "./kv-connect";
 
 const DATABASE_VERSION = 1;
 
@@ -58,7 +59,9 @@ export function getBaseKeyValueStore<T>(name: string, options?: KeyValueStoreOpt
       ...options,
       meta: options?.meta ?? meta
     };
-    if (isRedis()) {
+    if (isKVConnect()) {
+      kv = createKVConnectStore<T>(name, nextOptions);
+    } else if (isRedis()) {
       kv = createRedisKeyValueStore<T>(name, nextOptions);
     } else {
       kv = createKeyValueStore<T>(name, nextOptions, () => {

@@ -171,6 +171,7 @@
     "xmldom": "^0.6.0"
   },
   "devDependencies": {
+    "@deno/kv": "^0.6.1",
     "@opennetwork/http-representation": "^3.0.0",
     "@playwright/test": "^1.26.0",
     "@rollup/plugin-node-resolve": "^15.1.0",
