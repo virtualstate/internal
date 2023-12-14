@@ -2,14 +2,9 @@ import {KV_CONNECT_ACCESS_TOKEN, KV_CONNECT_URL} from "../../config";
 import {KeyValueStore, KeyValueStoreOptions, MetaKeyValueStore, MetaRecord} from "./types";
 import type {Kv} from "@deno/kv";
 import {ok} from "../../is";
-import {getRedisUrl} from "./redis-client-helpers";
-
 
 const GLOBAL_CLIENTS = new Map();
 const GLOBAL_CLIENTS_PROMISE = new Map();
-const GLOBAL_CLIENT_CONNECTION_PROMISE = new WeakMap();
-
-const DEFAULT_SCAN_SIZE = 42;
 
 export function getGlobalKVConnectClient(): Promise<Kv> {
     const url: string = KV_CONNECT_URL;
@@ -117,6 +112,40 @@ export function createKVConnectStore<T>(name: string, options?: KeyValueStoreOpt
             const fn = options?.meta;
             ok(fn, "expected meta option to be provided if meta is used");
             return fn<M>(key);
+        }
+    }
+}
+
+export function stopKVConnect() {
+    for (const [key, promise] of GLOBAL_CLIENTS_PROMISE.entries()) {
+        const client = GLOBAL_CLIENTS.get(key)
+        deleteKey(key);
+        if (client) {
+            client.close();
+        } else {
+            // If we didn't yet set the client, but we have a promise active
+            // reset all the clients again
+            //
+            // Its okay if we over do this, we will "just" make a new client
+            promise.then(
+                (client: Kv) => {
+                    // If it resolved but it's not set, we made a new promise over the top already
+                    // so we don't want to reset it
+                    if (GLOBAL_CLIENTS.get(key) === client) {
+                        deleteKey(key);
+                    }
+                    client.close();
+                },
+                () => {
+                    // If we got an error, delete either way
+                    deleteKey(key);
+                }
+            )
+        }
+
+        function deleteKey(key: string) {
+            GLOBAL_CLIENTS.delete(key);
+            GLOBAL_CLIENTS_PROMISE.delete(key);
         }
     }
 }
