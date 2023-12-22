@@ -67,7 +67,7 @@ function addRequestMethodRouteAndHandler(
     self.addEventListener("fetch", event => {
         if (event.tag === tag) {
             event.waitUntil(intercept());
-        } else if (!event.tag && isRouteMatchCondition(self.registration, route, event.request)) {
+        } else if (!event.tag && isRouteMatchCondition(self.registration.durable, route, event.request)) {
             event.waitUntil(intercept());
         }
 

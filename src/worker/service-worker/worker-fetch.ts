@@ -2,7 +2,7 @@ import type {DurableServiceWorkerRegistration} from "./container";
 import { globalFetch } from "./global-fetch";
 import {ServiceWorkerWorkerData} from "./worker";
 import {createServiceBindingRouter, getServiceBindingURL} from "./service-router";
-import {NamedService, WorkerBinding, ServiceEntrypoint} from "./configure/types";
+import type {NamedService, WorkerBinding, ServiceEntrypoint} from "./configure";
 import {serviceWorker} from "./container";
 import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 import {getImportUrlSourceForService} from "./worker-service-url";

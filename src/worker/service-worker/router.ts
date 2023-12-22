@@ -244,7 +244,11 @@ export function listRoutes(serviceWorkerId = getServiceWorkerId()) {
     return store.values();
 }
 
-export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistration, route: RouterRule, input: RequestInfo | URL, init?: RequestInit) {
+export interface RouteMatchConditionOptions {
+    baseURL: string;
+}
+
+export function isRouteMatchCondition({ baseURL }: RouteMatchConditionOptions, route: RouterRule, input: RequestInfo | URL, init?: RequestInit) {
 
     return isConditionsMatch(route.condition);
 
@@ -280,18 +284,18 @@ export function isRouteMatchCondition(serviceWorker: DurableServiceWorkerRegistr
             //   For a USVString input, a ServiceWorker script's URL is used as a base URL.
             //
             // My current assumption is we are completely comparing the URL and search params here
-            const matchInstance = new URL(url, serviceWorker.durable.baseURL);
-            const patternInstance = new URL(urlPattern, serviceWorker.durable.baseURL);
+            const matchInstance = new URL(url, baseURL);
+            const patternInstance = new URL(urlPattern, baseURL);
             return matchInstance.toString() === patternInstance.toString();
         } else {
             if ("test" in urlPattern && urlPattern.test) {
-                return urlPattern.test(url, serviceWorker.durable.baseURL);
+                return urlPattern.test(url, baseURL);
             } else {
                 const pattern = new URLPattern(
                     urlPattern,
-                    typeof urlPattern === "string" ? serviceWorker.durable.baseURL : undefined
+                    typeof urlPattern === "string" ? baseURL : undefined
                 );
-                return pattern.test(url, serviceWorker.durable.baseURL);
+                return pattern.test(url, baseURL);
             }
         }
     }
@@ -441,7 +445,7 @@ export async function createRouter(serviceWorkers: DurableServiceWorkerRegistrat
             }
 
             for (const route of routes) {
-                if (isRouteMatchCondition(serviceWorker, route, input, init)) {
+                if (isRouteMatchCondition(serviceWorker.durable, route, input, init)) {
                     return {
                         serviceWorker,
                         route

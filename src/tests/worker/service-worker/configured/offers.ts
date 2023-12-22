@@ -22,30 +22,25 @@ requestMethod.get({ pathname: "/offers" }, async () => {
         json.get<ProductPrice[]>("prices:/prices")
     ]);
     console.log({ prices, products });
- try {
 
-     const productPrices = Object.fromEntries(
-         prices.map(
-             ({ productId, value }: ProductPrice) => [productId, value] as const
-         )
-     );
+    const productPrices = Object.fromEntries(
+        prices.map(
+            ({ productId, value }: ProductPrice) => [productId, value] as const
+        )
+    );
 
-     const offers = products
-         .map((product: Product): ProductOffer => {
-             const { productId } = product;
-             const price = productPrices[productId];
+    const offers = products
+        .map((product: Product): ProductOffer => {
+            const { productId } = product;
+            const price = productPrices[productId];
 
-             return {
-                 ...product,
-                 isAvailable: typeof price === "number",
-                 price,
-                 validUntil: new Date(Date.now() + DAY_MS).toISOString()
-             }
-         });
+            return {
+                ...product,
+                isAvailable: typeof price === "number",
+                price,
+                validUntil: new Date(Date.now() + DAY_MS).toISOString()
+            }
+        });
 
-     return Response.json(offers);
- } catch (error) {
-     console.error(error);
-     return Response.error();
- }
+    return Response.json(offers);
 })

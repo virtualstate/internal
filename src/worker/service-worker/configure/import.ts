@@ -7,7 +7,15 @@ import {DurableEventData, fromDurableResponse, fromRequest, fromRequestWithSourc
 import {listen} from "../start";
 import {FetchResponseMessage} from "../dispatch";
 import {getImportUrlSourceForService} from "../worker-service-url";
-import {executeServiceWorkerFetch, executeServiceWorkerFetchEvent} from "../execute-fetch";
+import {
+    createServiceWorkerFetch,
+    executeServiceWorkerFetch,
+    executeServiceWorkerFetchEvent,
+    FetchFn, FetchInit
+} from "../execute-fetch";
+import {getURLSource} from "../url";
+import {getOrigin} from "../../../listen";
+import {isRouteMatchCondition} from "../router";
 
 async function importConfigModule(url: string | URL) {
     const configModule = await import(url.toString());
@@ -27,7 +35,8 @@ interface ServiceWorkerEventFn {
 interface ServiceWorkerContext {
     service: Service;
     registration: DurableServiceWorkerRegistration;
-    activated: Promise<ServiceWorkerEventFn>
+    activated: Promise<ServiceWorkerEventFn>;
+    fetch: FetchFn;
 }
 
 interface ServiceFn {
@@ -77,7 +86,11 @@ async function initialiseServices(config: Config) {
         const context: ServiceWorkerContext = {
             service,
             registration,
-            activated: activateService(registration, service)
+            activated: activateService(registration, service),
+            fetch: createServiceWorkerFetch(registration, {
+                config,
+                service
+            })
         }
         const contextPromise = Promise.resolve(context);
         namedServices[registration.durable.serviceWorkerId] = contextPromise;
@@ -124,26 +137,33 @@ async function initialiseServices(config: Config) {
     }
 }
 
+export interface ImportConfigurationOptions {
+    virtual?: boolean;
+}
+
 /**
  * Import configuration and initiate services
  */
-export async function importConfiguration(url: string | URL) {
+export async function importConfiguration(url: string | URL, { virtual }: ImportConfigurationOptions = {}) {
     const config = await importConfigModule(url);
     config.url = new URL(url, "file://").toString();
-    const services = await initialiseServices(config);
+    const getService = await initialiseServices(config);
+
+    const fetch = createSocketFetch(config, getService);
 
     let closeFns: (() => Promise<void>)[] = [];
 
-    if (config.sockets?.length) {
+    if (!virtual && config.sockets?.length) {
         closeFns = await Promise.all(
             config.sockets.map(
-                socket => initialiseSocket(config, socket, services)
+                socket => initialiseSocket(config, socket, getService)
             )
         );
     }
 
     return {
-        services,
+        fetch,
+        getService,
         async close() {
             if (closeFns.length) {
                 await Promise.all(closeFns.map(async fn => fn()))
@@ -151,6 +171,54 @@ export async function importConfiguration(url: string | URL) {
             closeFns = [];
         }
     };
+}
+
+function createSocketFetch(config: Config, getService: ServiceFn): FetchFn {
+    return async (input, init) => {
+        const urlSource = getURLSource(input)
+        const socket = config.sockets?.find(socket => {
+            const [hostname, port] = socket.address.split(":");
+            const url = new URL(urlSource, `${socket.type || "http"}://${hostname === "*" ? "localhost" : hostname}${port === "*" ? "" : `:${port}`}`);
+            if (! (
+                (hostname === "*" || url.hostname === hostname) &&
+                (port === "*" || url.port === port)
+            )) {
+                return false;
+            }
+            if (Array.isArray(socket.routes)) {
+                for (const route of socket.routes) {
+                    if (isRouteMatchCondition(
+                        {
+                            baseURL: url.origin
+                        },
+                        route,
+                        input,
+                        init
+                    )) {
+                        return true;
+                    }
+                }
+                return false;
+            } else if (socket.routes) {
+                return isRouteMatchCondition(
+                    {
+                        baseURL: url.origin
+                    },
+                    socket.routes,
+                    input,
+                    init
+                );
+            } else {
+                return true;
+            }
+        });
+        if (!socket) {
+            throw new Error("Unknown address")
+        }
+        const service = await getService(socket.service);
+        await service.activated;
+        return service.fetch(input, init);
+    }
 }
 
 async function initialiseSocket(config: Config, socket: Socket, getService: ServiceFn) {
