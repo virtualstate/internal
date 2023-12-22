@@ -20,6 +20,9 @@ const prices: ProductPrice[] = [
     }
 ]
 
-requestMethod.get("/prices", () => {
+console.log("Inside prices service worker!")
+
+requestMethod.get({ pathname: "/prices" }, () => {
+    console.log("Inside prices fetch")
     return Response.json(prices)
 })

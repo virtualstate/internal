@@ -10,7 +10,10 @@ export interface ProductOffer extends Product {
     validUntil: string;
 }
 
-requestMethod.get("/offers", async () => {
+console.log("Inside offers service worker!")
+
+requestMethod.get({ pathname: "/offers" }, async () => {
+    console.log("Inside offers fetch")
     const [
         prices,
         products
@@ -18,25 +21,31 @@ requestMethod.get("/offers", async () => {
         json.get("products:/products"),
         json.get("prices:/prices")
     ]);
+    console.log({ prices, products });
+ try {
 
-    const productPrices = Object.fromEntries(
-        prices.map(
-            ({ productId, value }: ProductPrice) => [productId, value] as const
-        )
-    );
+     const productPrices = Object.fromEntries(
+         prices.map(
+             ({ productId, value }: ProductPrice) => [productId, value] as const
+         )
+     );
 
-    const offers = products
-        .map((product: Product): ProductOffer => {
-            const { productId } = product;
-            const price = productPrices.get(productId);
+     const offers = products
+         .map((product: Product): ProductOffer => {
+             const { productId } = product;
+             const price = productPrices[productId];
 
-            return {
-                ...product,
-                isAvailable: typeof price === "number",
-                price,
-                validUntil: new Date(Date.now() + DAY_MS).toISOString()
-            }
-        });
+             return {
+                 ...product,
+                 isAvailable: typeof price === "number",
+                 price,
+                 validUntil: new Date(Date.now() + DAY_MS).toISOString()
+             }
+         });
 
-    return Response.json(offers);
+     return Response.json(offers);
+ } catch (error) {
+     console.error(error);
+     return Response.error();
+ }
 })

@@ -11,7 +11,7 @@ export interface WorkerBindingSourceOptions extends ImportCallOptions {
     json?: string | unknown;
     import?: string | URL;
     service?: ServiceEntrypointOption;
-    resolver?: (url: string) => unknown;
+    routes?: AddRoutesOptions;
 }
 
 export interface WorkerBindingTypeOptions extends WorkerBindingSourceOptions {
@@ -76,6 +76,7 @@ export interface HttpsSocket extends Socket, HttpOptions {
 export type SocketType = HttpSocket | HttpsSocket;
 
 export interface Config {
+    url?: string;
     services?: NamedService[];
     sockets?: SocketType[];
 }

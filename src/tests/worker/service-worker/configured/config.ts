@@ -14,8 +14,8 @@ export const config: Config = {
             url: "./products.js"
         },
         {
-            name: "cart",
-            url: "./cart.js",
+            name: "offers",
+            url: "./offers.js",
             bindings: [
                 {
                     protocol: "products",
@@ -40,7 +40,7 @@ export const config: Config = {
             }
         ] : []),
         {
-            service: "cart",
+            service: "offers",
             address: "*:3000"
         }
     ]

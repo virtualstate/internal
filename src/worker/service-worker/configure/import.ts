@@ -2,15 +2,15 @@ import {Config, Socket, Service, ServiceEntrypointOption} from "./types";
 import {isLike, ok} from "../../../is";
 import {SERVICE_WORKER_LISTEN_HOSTNAME} from "../../../config";
 import {DurableServiceWorkerRegistration, serviceWorker} from "../container";
-import process from "node:process";
-import {join} from "node:path";
 import {createServiceWorkerWorker} from "../execute";
-import {DurableEventData, fromDurableResponse} from "../../../data";
+import {DurableEventData, fromDurableResponse, fromRequest, fromRequestWithSourceBody} from "../../../data";
 import {listen} from "../start";
 import {FetchResponseMessage} from "../dispatch";
+import {getImportUrlSourceForService} from "../worker-service-url";
+import {executeServiceWorkerFetch, executeServiceWorkerFetchEvent} from "../execute-fetch";
 
-async function importConfigModule(url: string) {
-    const configModule = await import(url);
+async function importConfigModule(url: string | URL) {
+    const configModule = await import(url.toString());
     if (isLike<{ config?: Config }>(configModule) && configModule.config) {
         return configModule.config
     } else if (isLike<{ default?: Config }>(configModule) && configModule.default) {
@@ -25,6 +25,7 @@ interface ServiceWorkerEventFn {
 }
 
 interface ServiceWorkerContext {
+    service: Service;
     registration: DurableServiceWorkerRegistration;
     activated: Promise<ServiceWorkerEventFn>
 }
@@ -32,6 +33,8 @@ interface ServiceWorkerContext {
 interface ServiceFn {
     (service?: ServiceEntrypointOption): Promise<ServiceWorkerContext>;
 }
+
+
 
 async function initialiseServices(config: Config) {
     const namedServices: Record<string, Promise<ServiceWorkerContext>> = {};
@@ -41,7 +44,7 @@ async function initialiseServices(config: Config) {
         if (existing) {
             return existing;
         }
-        namedServices[idOrName] = initialiseService(options);
+        return namedServices[idOrName] = initialiseService(options);
     }
 
     function findServiceConfig(name: string) {
@@ -68,23 +71,11 @@ async function initialiseServices(config: Config) {
         return options;
     }
 
-    function getImportUrlSourceForService(service: Service) {
-        if (!service.url) {
-            // TODO search for files async
-            return join(process.cwd(), "index.js");
-        }
-        if (!Array.isArray(service.url)) {
-            return service.url.toString();
-        }
-        const [first] = service.url;
-        ok(first, "Expected at least one url to import for service");
-        return first.toString();
-    }
-
     async function initialiseService(service: Service) {
-        const url = getImportUrlSourceForService(service);
+        const url = getImportUrlSourceForService(service, config);
         const registration = await serviceWorker.register(url)
         const context: ServiceWorkerContext = {
+            service,
             registration,
             activated: activateService(registration, service)
         }
@@ -128,7 +119,7 @@ async function initialiseServices(config: Config) {
         if (parsed.name) {
             return getService(parsed.name, parsed);
         }
-        const url = getImportUrlSourceForService(parsed);
+        const url = getImportUrlSourceForService(parsed, config);
         return getService(url, parsed);
     }
 }
@@ -136,22 +127,33 @@ async function initialiseServices(config: Config) {
 /**
  * Import configuration and initiate services
  */
-export async function importConfiguration(url: string) {
+export async function importConfiguration(url: string | URL) {
     const config = await importConfigModule(url);
+    config.url = new URL(url, "file://").toString();
     const services = await initialiseServices(config);
 
+    let closeFns: (() => Promise<void>)[] = [];
+
     if (config.sockets?.length) {
-        await Promise.all(
+        closeFns = await Promise.all(
             config.sockets.map(
-                socket => initialiseSocket(socket, services)
+                socket => initialiseSocket(config, socket, services)
             )
         );
     }
 
-    return services;
+    return {
+        services,
+        async close() {
+            if (closeFns.length) {
+                await Promise.all(closeFns.map(async fn => fn()))
+            }
+            closeFns = [];
+        }
+    };
 }
 
-async function initialiseSocket(socket: Socket, getService: ServiceFn) {
+async function initialiseSocket(config: Config, socket: Socket, getService: ServiceFn) {
 
     ok(socket.address.includes(":"), "Expected address in the format \"host:port\", e.g \"*:8080\"")
     let [hostname, port] = socket.address.split(":");
@@ -165,16 +167,33 @@ async function initialiseSocket(socket: Socket, getService: ServiceFn) {
     const dispatch = await service.activated;
 
     async function fetchDispatch(event: DurableEventData) {
-        const { handled, respondWith, signal, ...rest } = event;
+        const { handled, respondWith, signal, request, ...rest } = event;
         ok(typeof respondWith === "function");
-        const returned = await dispatch(rest);
-        ok<FetchResponseMessage>(returned);
+        ok(request instanceof Request);
 
-        if (returned.response) {
-            respondWith(await fromDurableResponse(returned.response));
-        }
+        respondWith(executeServiceWorkerFetchEvent(service.registration, {
+            type: "fetch",
+            request: fromRequestWithSourceBody(request),
+            virtual: true
+        }, {
+            config,
+            service: service.service
+        }))
 
-        return { type: "service:listener:fetch:handled", returned }
+        // ok(typeof respondWith === "function");
+        // ok(request instanceof Request);
+        // const returned = await dispatch({
+        //     ...rest,
+        //     request: fromRequestWithSourceBody(request)
+        // });
+        // console.log(returned);
+        // ok<FetchResponseMessage>(returned);
+        //
+        // if (returned.response) {
+        //     respondWith(await fromDurableResponse(returned.response));
+        // }
+
+        return { type: "service:listener:fetch:handled" }
     }
 
     async function variableDispatch(event: DurableEventData): Promise<DurableEventData> {
@@ -186,7 +205,7 @@ async function initialiseSocket(socket: Socket, getService: ServiceFn) {
         return { type: "service:listener:handled" }
     }
 
-    await listen({
+    return await listen({
         id: service.registration.durable.serviceWorkerId,
         url: service.registration.durable.url,
         listen: {

@@ -74,6 +74,7 @@ try {
     await import("./chain");
     await import("./loop");
     await import("./store");
+    await import("./configured");
 } catch (e) {
     console.error(e);
     process.exit(1);

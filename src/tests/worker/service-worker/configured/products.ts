@@ -20,6 +20,9 @@ const products: Product[] = [
     }
 ]
 
-requestMethod.get("/products", () => {
+console.log("Inside products service worker!")
+
+requestMethod.get({ pathname: "/products" }, () => {
+    console.log("Inside products fetch")
     return Response.json(products)
 })

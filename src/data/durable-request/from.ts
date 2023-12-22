@@ -114,6 +114,16 @@ export function fromRequestWithoutBody(request: Request | DurableRequestData): D
     }
 }
 
+export function fromRequestWithSourceBody(request: Request): DurableRequestData {
+    return {
+        ...fromRequestWithoutBody(request),
+        body: {
+            type: "source",
+            value: request.clone().body
+        }
+    }
+}
+
 export async function fromRequest(request: Request, options?: FromRequestResponseOptions) {
     return {
         ...fromRequestWithoutBody(request),

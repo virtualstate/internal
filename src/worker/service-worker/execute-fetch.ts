@@ -5,6 +5,7 @@ import {isLike, ok} from "../../is";
 import type {FetchResponseMessage} from "./dispatch";
 import type {DurableServiceWorkerRegistration} from "./container";
 import {getOrigin} from "../../listen/config";
+import {ServiceWorkerWorkerData} from "./worker";
 
 export interface ServiceWorkerFetchOptions {
     tag?: string;
@@ -18,7 +19,7 @@ export interface FetchFn {
     (input: RequestInfo | URL, init?: FetchInit): Promise<Response>
 }
 
-export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration): FetchFn {
+export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>): FetchFn {
     return (input, init) => {
         let request: Request | DurableRequestData;
         if (input instanceof Request) {
@@ -45,12 +46,13 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
         return executeServiceWorkerFetch(
             registration,
             request,
-            init
+            init,
+            serviceWorkerInit
         );
     }
 }
 
-export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData, options?: ServiceWorkerFetchOptions) {
+export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData, options?: ServiceWorkerFetchOptions, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>) {
     return executeServiceWorkerFetchEvent(registration, {
         type: "fetch",
         request: request instanceof Request ?
@@ -58,14 +60,14 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
             request,
         virtual: true,
         tag: options?.tag
-    });
+    }, serviceWorkerInit);
 }
 
-export async function executeServiceWorkerFetchEvent(registration: DurableServiceWorkerRegistration, event: DurableFetchEventData) {
-    const { ReadableStream } = await import("node:stream/web");
+export async function executeServiceWorkerFetchEvent(registration: DurableServiceWorkerRegistration, event: DurableFetchEventData, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>) {
     const { MessageChannel } = await import("node:worker_threads");
 
     const data = executeServiceWorkerWorker({
+        ...serviceWorkerInit,
         serviceWorkerId: registration.durable.serviceWorkerId,
         event,
         channel: new MessageChannel()
