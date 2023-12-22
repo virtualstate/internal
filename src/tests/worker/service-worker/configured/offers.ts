@@ -15,11 +15,11 @@ console.log("Inside offers service worker!")
 requestMethod.get({ pathname: "/offers" }, async () => {
     console.log("Inside offers fetch")
     const [
+        products,
         prices,
-        products
     ] = await Promise.all([
-        json.get("products:/products"),
-        json.get("prices:/prices")
+        json.get<Product[]>("products:/products"),
+        json.get<ProductPrice[]>("prices:/prices")
     ]);
     console.log({ prices, products });
  try {
