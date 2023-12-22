@@ -5,34 +5,35 @@ export interface WorkerParameter {
     optional?: boolean;
 }
 
-export interface WorkerBindingSourceOptions extends ImportCallOptions {
+export interface WorkerBindingSourceOptions {
     text?: string;
     data?: BlobPart;
     json?: string | unknown;
     import?: string | URL;
     service?: ServiceEntrypointOption;
-    routes?: AddRoutesOptions;
+    queue?: ServiceEntrypointOption;
 }
 
 export interface WorkerBindingTypeOptions extends WorkerBindingSourceOptions {
     parameter?: WorkerParameter
 }
 
-export interface WorkerBinding extends WorkerBindingTypeOptions {
+export interface WorkerBinding extends WorkerBindingTypeOptions, ImportCallOptions {
     name?: string;
     protocol?: string;
+    routes?: AddRoutesOptions;
 }
 
 export interface WorkerOptions {
     bindings?: WorkerBinding[];
 }
 
-export interface ScriptWorker extends WorkerOptions {
+export interface ScriptWorker {
     // Optional if importing from same directory, could be just a different entrypoint from ServiceEntrypoint
     url?: string | URL | (string | URL)[];
 }
 
-export interface Service extends ScriptWorker {
+export interface Service extends ScriptWorker, WorkerOptions {
     name?: string;
 }
 

@@ -144,9 +144,15 @@ export interface ImportConfigurationOptions {
 /**
  * Import configuration and initiate services
  */
-export async function importConfiguration(url: string | URL, { virtual }: ImportConfigurationOptions = {}) {
-    const config = await importConfigModule(url);
-    config.url = new URL(url, "file://").toString();
+export async function importConfiguration(source: string | URL | Config, { virtual }: ImportConfigurationOptions = {}) {
+    let config: Config;
+    if (typeof source === "string" || source instanceof URL) {
+        config = await importConfigModule(source);
+        config.url = new URL(source, "file://").toString();
+    } else {
+        config = source;
+        ok(config.url, "Must give base url for config if provided directly");
+    }
     const getService = await initialiseServices(config);
 
     const fetch = createSocketFetch(config, getService);

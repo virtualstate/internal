@@ -42,8 +42,15 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     });
     const { protocol, origin } = new URL(registration.durable.baseURL || registration.durable.url);
 
+    let imported: unknown = undefined;
+
+    function getServiceWorkerModuleExports() {
+        return imported;
+    }
+
     Object.assign(globalThis, {
         _ORIGINAL_GLOBAL_FETCH: globalFetch,
+        _GLOBAL_getServiceWorkerModuleExports: getServiceWorkerModuleExports,
         registration,
         caches,
         index,
@@ -62,7 +69,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
 
     const url = new URL(registration.durable.url, registration.durable.baseURL);
     url.searchParams.set("importCacheBust", Date.now().toString());
-    await import(url.toString());
+    imported = await import(url.toString());
 
     if (registration.durable.registrationState === "pending" || registration.durable.registrationState === "installing") {
         try {

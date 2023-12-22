@@ -14,6 +14,7 @@ import {caches} from "./cache";
 import {dispatchEvent} from "../events/schedule/event";
 import {getConfig} from "../config";
 import type {DurableFetchEventCache, DurableFetchEventData} from "./events";
+import {getServiceWorkerModuleExports} from "../worker/service-worker/worker-exports";
 
 export function isDurableFetchEventCache(value: unknown): value is DurableFetchEventCache {
     return !!(
@@ -197,16 +198,56 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
         wait,
         waitUntil
     } = createWaitUntil(event);
+    let request: Request;
+
     try {
-        const request = await fromDurableRequest(event.request);
-        await dispatch({
+        request = await fromDurableRequest(event.request);
+    } catch (error) {
+        throw new Error("Could not create request from event");
+    }
+
+    try {
+        const requestEvent = {
             ...event,
             signal,
             request,
             handled,
             respondWith,
             waitUntil
-        });
+        };
+
+        type ServiceWorkerFetchFn = (request: Request, event: DurableEventData) => unknown;
+
+        async function dispatchServiceWorkerFnRequest(fn: unknown, fnError = "Expected entrypoint to be a function") {
+            ok<ServiceWorkerFetchFn>(fn, fnError);
+            ok(typeof fn === "function", fnError);
+            let returned = fn(request, event);
+            if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
+                waitUntil(returned);
+                returned = await returned;
+            }
+            if (returned instanceof Response) {
+                respondWith(returned);
+            }
+        }
+
+        const serviceWorker = getServiceWorkerModuleExports();
+        if (event.entrypoint) {
+            const entrypoint = serviceWorker[event.entrypoint];
+            if (!entrypoint) {
+                const names = Object.keys(serviceWorker);
+                throw new Error(`Unknown entrypoint ${event.entrypoint}, expected one of ${names.join(", ")}`);
+            }
+            await dispatchServiceWorkerFnRequest(entrypoint);
+        } else if (typeof serviceWorker.fetch === "function") {
+            await dispatchServiceWorkerFnRequest(serviceWorker.fetch);
+        } else if (typeof serviceWorker.default === "function") {
+            await dispatchServiceWorkerFnRequest(serviceWorker.default);
+        } else if (isLike<Record<string, unknown>>(serviceWorker.default) && typeof serviceWorker.default.fetch === "function") {
+            await dispatchServiceWorkerFnRequest(serviceWorker.default.fetch);
+        } else {
+            await dispatch(requestEvent);
+        }
         // We may not get a response as it is being handled elsewhere
         if (promise) {
             const response = await promise;
@@ -225,7 +266,11 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
         if (!signal.aborted) {
             controller?.abort(error);
         }
-        throw await Promise.reject(error);
+        await onFetchResponse(
+            event,
+            request,
+            Response.error()
+        )
     } finally {
         if (!signal.aborted) {
             await wait?.();

@@ -2,10 +2,12 @@ import type {DurableServiceWorkerRegistration} from "./container";
 import { globalFetch } from "./global-fetch";
 import {ServiceWorkerWorkerData} from "./worker";
 import {createServiceBindingRouter, getServiceBindingURL} from "./service-router";
-import type {NamedService, WorkerBinding, ServiceEntrypoint} from "./configure";
+import type {WorkerBinding, ServiceEntrypoint, Service} from "./configure";
 import {serviceWorker} from "./container";
 import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 import {getImportUrlSourceForService} from "./worker-service-url";
+import {dispatchEvent} from "../../events";
+import {DurableEventData, fromRequest} from "../../data";
 
 const serviceWorkerContainer = serviceWorker;
 
@@ -18,14 +20,15 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
 
     const router = createServiceBindingRouter(data, serviceWorker);
 
+    const bindingRegistrations = new WeakMap<WorkerBinding, Promise<DurableServiceWorkerRegistration>>();
     const bindingFetchers = new WeakMap<WorkerBinding, Promise<FetchFn>>();
 
-    async function createBindingFetch(binding: WorkerBinding) {
+    function getBindingServiceEntrypoint(binding: WorkerBinding) {
         let serviceName = binding.service || binding.protocol || binding.name;
         if (!serviceName) {
             throw new Error("Expected binding to have service name")
         }
-        let serviceEntrypoint: ServiceEntrypoint | NamedService;
+        let serviceEntrypoint: ServiceEntrypoint;
         if (typeof serviceName === "string") {
             serviceEntrypoint = config.services?.find(service => service.name === serviceName)
         } else {
@@ -34,12 +37,33 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
         if (!serviceEntrypoint) {
             throw new Error(`Unknown service name ${serviceName}`)
         }
-        const namedService = (
+        return serviceEntrypoint;
+    }
+
+    function getBindingNamedService(binding: WorkerBinding, serviceEntrypoint = getBindingServiceEntrypoint(binding)) {
+        return (
             config.services?.find(service => serviceEntrypoint.name === service.name) ??
             service
         );
-        const url = getImportUrlSourceForService(namedService, config);
-        const registration = await serviceWorkerContainer.register(url);
+    }
+
+    function bindingRegistration(binding: WorkerBinding, namedService?: Service) {
+        let promise = bindingRegistrations.get(binding);
+        if (!promise) {
+            promise = get();
+            bindingRegistrations.set(binding, promise);
+        }
+        return promise;
+
+        async function get() {
+            const url = getImportUrlSourceForService(namedService || getBindingNamedService(binding), config);
+            return await serviceWorkerContainer.register(url);
+        }
+    }
+
+    async function createBindingFetch(binding: WorkerBinding) {
+        const namedService = getBindingNamedService(binding);
+        const registration = await bindingRegistration(binding, namedService);
         return createServiceWorkerFetch(registration, {
             config,
             service: namedService,
@@ -54,10 +78,15 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
             bindingFetchers.set(binding, promise);
         }
         const fetch = await promise;
-        return fetch(input, init);
+        const entrypoint = getBindingServiceEntrypoint(binding);
+        const entrypointInit: RequestInit & { entrypoint?: unknown } = {
+            ...init,
+            entrypoint: entrypoint.entrypoint
+        }
+        return fetch(input, entrypointInit);
     }
 
-    return async function serviceWorkerFetch(input, init) {
+    return async function serviceWorkerFetch(input, init?: RequestInit & { dispatch?: DurableEventData }) {
         const binding = router(input, init);
 
         if (!binding) {
@@ -102,6 +131,23 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
                     }
                 }
             )
+        }
+
+        if (binding.queue) {
+            const serviceEntrypoint = getBindingServiceEntrypoint(binding);
+            const namedService = getBindingNamedService(binding, serviceEntrypoint);
+            const registration = await bindingRegistration(binding, namedService);
+            const request = new Request(input, init);
+            await dispatchEvent({
+                type: "fetch",
+                serviceWorkerId: registration.durable.serviceWorkerId,
+                request: await fromRequest(request, {
+                    persist: true // Persist as queue may be out of process
+                }),
+                dispatch: init.dispatch,
+                entrypoint: serviceEntrypoint.entrypoint
+            });
+            return new Response(null, { status: 204 });
         }
 
         throw new Error("Unknown or unimplemented worker binding type")

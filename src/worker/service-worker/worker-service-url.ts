@@ -1,17 +1,16 @@
 import {Config, Service} from "./configure/types";
-import {join} from "node:path";
-import process from "node:process";
 import {ok} from "../../is";
 
 export function getImportUrlSourceForService(service: Service, config: Config) {
-    if (!service.url) {
-        // TODO search for files async
-        return join(process.cwd(), "index.js");
+    let url = service.url;
+    if (!url) {
+        // TODO map to different extensions
+        url = `./${service.name}.js`;
     }
-    if (!Array.isArray(service.url)) {
-        return new URL(service.url, config.url).toString();
+    if (!Array.isArray(url)) {
+        return new URL(url, config.url).toString();
     }
-    const [first] = service.url;
+    const [first] = url;
     ok(first, "Expected at least one url to import for service");
     return new URL(first, config.url).toString();
 }
