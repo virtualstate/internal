@@ -27,6 +27,7 @@ export interface DurableFetchEventData extends DurableEventData {
     dispatch?: string | DurableEventData;
     cache?: string | RequestCache | DurableFetchEventCache;
     entrypoint?: string;
+    entrypointArguments?: string[];
 }
 
 export interface FetchEvent extends Omit<DurableFetchEventData, "request">, FetchRespondWith {

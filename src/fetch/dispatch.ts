@@ -222,7 +222,7 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
     }
 
     try {
-        const requestEvent = {
+        const requestEvent: DurableEventData = {
             ...event,
             signal,
             request,
@@ -233,10 +233,21 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
 
         type ServiceWorkerFetchFn = (request: Request, event: DurableEventData) => unknown;
 
+        const entrypointArguments = event.entrypointArguments;
+
         async function dispatchServiceWorkerFnRequest(fn: unknown, fnError = "Expected entrypoint to be a function") {
-            ok<ServiceWorkerFetchFn>(fn, fnError);
             ok(typeof fn === "function", fnError);
-            let returned = fn(request, event);
+
+            let returned;
+            if (entrypointArguments) {
+                const requestArguments = entrypointArguments.map(
+                    key => key === "$event" ? requestEvent : requestEvent[key]
+                );
+                returned = fn(...requestArguments);
+            } else {
+                ok<ServiceWorkerFetchFn>(fn, fnError);
+                returned = fn(request, requestEvent);
+            }
             if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
                 waitUntil(returned);
                 returned = await returned;
