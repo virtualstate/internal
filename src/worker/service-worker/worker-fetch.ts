@@ -41,9 +41,12 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
     }
 
     function getBindingNamedService(binding: WorkerBinding, serviceEntrypoint = getBindingServiceEntrypoint(binding)) {
+        if (!serviceEntrypoint.name) {
+            return serviceEntrypoint;
+        }
         return (
             config.services?.find(service => serviceEntrypoint.name === service.name) ??
-            service
+            serviceEntrypoint
         );
     }
 
