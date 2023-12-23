@@ -18,7 +18,12 @@ import {getOrigin} from "../../../listen";
 import {isRouteMatchCondition} from "../router";
 
 async function importConfigModule(url: string | URL) {
-    const configModule = await import(url.toString());
+    const instance = url instanceof URL ? url : new URL(url, "file:///");
+    const configModule = await import(url.toString(), {
+        assert: instance.pathname.endsWith(".json") ? {
+            type: "json"
+        } : undefined
+    });
     if (isLike<{ config?: Config }>(configModule) && configModule.config) {
         return configModule.config
     } else if (isLike<{ default?: Config }>(configModule) && configModule.default) {

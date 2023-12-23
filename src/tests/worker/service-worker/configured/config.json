@@ -1,0 +1,42 @@
+{
+    "url": "./esnext/tests/worker/service-worker/configured/config.json",
+    "services": [
+        {
+            "name": "prices",
+            "json": [
+                {
+                    "productId": "apples",
+                    "value": 2
+                },
+                {
+                    "productId": "pears",
+                    "value": 2.5
+                }
+            ]
+        },
+        {
+            "name": "products",
+            "url": "./products.js"
+        },
+        {
+            "name": "offers",
+            "url": "./offers.js",
+            "bindings": [
+                {
+                    "protocol": "products",
+                    "service": "products"
+                },
+                {
+                    "protocol": "prices",
+                    "service": "prices"
+                }
+            ]
+        }
+    ],
+    "sockets": [
+        {
+            "service": "offers",
+            "address": "*:3000"
+        }
+    ]
+}

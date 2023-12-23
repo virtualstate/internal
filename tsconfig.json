@@ -15,8 +15,9 @@
     "jsx": "react-jsx",
     "allowJs": true,
     "paths": {},
+    "resolveJsonModule": true,
     "typeRoots": ["./node_modules/@types", "src/types"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/**/*.json"],
   "exclude": ["node_modules/@opennetwork/vdom"]
 }
