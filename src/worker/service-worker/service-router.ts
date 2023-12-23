@@ -10,7 +10,10 @@ export function getServiceBindingURL(input: URL | RequestInfo, service: Service,
     if (source instanceof URL) {
         return source;
     }
-    const base = getImportUrlSourceForService(service, config);
+    let base = getImportUrlSourceForService(service, config);
+    if (base.startsWith("data:")) {
+        base = "file:///";
+    }
     return new URL(source, base);
 }
 
@@ -71,7 +74,7 @@ export function isServiceMatchCondition(serviceWorker: DurableServiceWorkerRegis
     }
 
     if (binding.name) {
-        return getServiceBindingURL(binding.name, service, config).toString() !== url.toString();
+        return getServiceBindingURL(binding.name, service, config).toString() === url.toString();
     }
 
     return false

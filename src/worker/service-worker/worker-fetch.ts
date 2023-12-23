@@ -151,6 +151,11 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
             return new Response(null, { status: 204 });
         }
 
+        if (binding.name) {
+            // Name only binding
+            return bindingFetch(binding, input, init);
+        }
+
         throw new Error("Unknown or unimplemented worker binding type")
     }
 }
