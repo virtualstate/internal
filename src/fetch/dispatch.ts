@@ -141,19 +141,34 @@ export function isDurableFetchEventData(event?: DurableEventData): event is Dura
 async function onFetchResponse(event: DurableFetchEventData, request: Request, response: Response) {
     let durableEventDispatch: DurableEventData;
     if (event.dispatch) {
+        let durableEventDispatchData: DurableEventData;
+        if (typeof event.dispatch === "string") {
+            durableEventDispatchData = {
+                type: event.dispatch
+            };
+        } else {
+            durableEventDispatchData = event.dispatch;
+        }
         durableEventDispatch = {
             durableEventId: v4(),
-            ...event.dispatch
+            ...durableEventDispatchData
         };
     }
     const isRetain = durableEventDispatch || (event.durableEventId && event.retain !== false);
     let body: DurableBody;
     const givenCache = typeof event.cache === "string" ? { name: event.cache } : isDurableFetchEventCache(event.cache) ? event.cache : undefined;
     const cache =  givenCache ?? (isRetain ? { name: "fetch" } : undefined);
-    if (cache) {
+    // cache name has some special cases:
+    // type RequestCache = "default" | "force-cache" | "no-cache" | "no-store" | "only-if-cached" | "reload";
+    if (cache && cache.name !== "no-store" && cache.name !== "only-if-cached") {
         const { name, always } = cache;
-        if (response.ok || always) {
-            const store = await caches.open(name);
+        const isForceCache = name === "force-cache"
+        if (response.ok || (always || isForceCache)) {
+            let cacheName = name;
+            if (isForceCache || name === "reload") {
+                cacheName = "default";
+            }
+            const store = await caches.open(cacheName);
             await store.put(request, response);
             body = {
                 type: "cache",

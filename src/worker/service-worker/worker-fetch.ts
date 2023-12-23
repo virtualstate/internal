@@ -79,11 +79,10 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
         }
         const fetch = await promise;
         const entrypoint = getBindingServiceEntrypoint(binding);
-        const entrypointInit: RequestInit & { entrypoint?: unknown } = {
+        return fetch(input, {
             ...init,
             entrypoint: entrypoint.entrypoint
-        }
-        return fetch(input, entrypointInit);
+        });
     }
 
     return async function serviceWorkerFetch(input, init?: RequestInit & { dispatch?: DurableEventData }) {

@@ -1,5 +1,5 @@
-import {DurableFetchEventData} from "../../fetch";
-import {DurableRequestData, fromDurableResponse, fromRequest, getFetchHeadersObject} from "../../data";
+import {DurableFetchEventCache, DurableFetchEventData} from "../../fetch";
+import {DurableEventData, DurableRequestData, fromDurableResponse, fromRequest, getFetchHeadersObject} from "../../data";
 import {executeServiceWorkerWorker} from "./execute";
 import {isLike, ok} from "../../is";
 import type {FetchResponseMessage} from "./dispatch";
@@ -9,6 +9,8 @@ import {ServiceWorkerWorkerData} from "./worker";
 
 export interface ServiceWorkerFetchOptions {
     tag?: string;
+    entrypoint?: string;
+    dispatch?: string | DurableEventData;
 }
 
 export interface FetchInit extends RequestInit, ServiceWorkerFetchOptions {
@@ -59,7 +61,8 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
             await fromRequest(request) :
             request,
         virtual: true,
-        tag: options?.tag
+        dispatch: options?.dispatch,
+        entrypoint: options?.entrypoint,
     }, serviceWorkerInit);
 }
 

@@ -24,8 +24,8 @@ export interface DurableFetchEventCache {
 export interface DurableFetchEventData extends DurableEventData {
     type: ScheduleFetchEventType;
     request: DurableRequestData;
-    dispatch?: DurableEventData;
-    cache?: string | DurableFetchEventCache;
+    dispatch?: string | DurableEventData;
+    cache?: string | RequestCache | DurableFetchEventCache;
     entrypoint?: string;
 }
 
