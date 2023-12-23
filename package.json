@@ -171,7 +171,8 @@
     "tmp": "^0.2.1",
     "uuid": "^8.3.2",
     "whatwg-url": "^9.1.0",
-    "xmldom": "^0.6.0"
+    "xmldom": "^0.6.0",
+    "urlpattern-polyfill": "^1.0.0-rc2"
   },
   "devDependencies": {
     "@deno/kv": "^0.6.1",
@@ -225,7 +226,6 @@
     "ts-node": "^10.2.1",
     "tsc-watch": "^6.0.4",
     "typescript": "^5.2.2",
-    "urlpattern-polyfill": "^1.0.0-rc2",
     "v8-to-istanbul": "^8.1.0",
     "why-is-node-still-running": "^1.0.0"
   },

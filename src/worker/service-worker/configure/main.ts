@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import process from "node:process";
 import {importConfiguration} from "./import";
 import {join} from "node:path";
