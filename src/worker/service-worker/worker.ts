@@ -23,6 +23,7 @@ import {getInternalStorageBucket} from "../../storage-buckets/internal";
 import {Config, Service} from "./configure/types";
 import {globalFetch} from "./global-fetch";
 import { createServiceWorkerWorkerFetch } from "./worker-fetch";
+import {importWorkerExtensions} from "./worker-extensions";
 
 declare var _ORIGINAL_GLOBAL_FETCH: typeof fetch;
 
@@ -66,6 +67,10 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     });
 
     await import("./dispatchers");
+
+    if (data.config?.extensions) {
+        await importWorkerExtensions(data.config);
+    }
 
     const url = new URL(registration.durable.url, registration.durable.baseURL);
     url.searchParams.set("importCacheBust", Date.now().toString());

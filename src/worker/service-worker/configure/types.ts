@@ -5,11 +5,13 @@ export interface WorkerParameter {
     optional?: boolean;
 }
 
+type ImportableURL = string | URL;
+
 export interface WorkerBindingSourceOptions {
     text?: string;
     data?: BlobPart;
     json?: string | unknown;
-    import?: string | URL;
+    import?: ImportableURL;
     service?: ServiceEntrypointOption;
     queue?: ServiceEntrypointOption;
 }
@@ -30,7 +32,7 @@ export interface WorkerOptions {
 
 export interface ScriptWorker {
     // Optional if importing from same directory, could be just a different entrypoint from ServiceEntrypoint
-    url?: string | URL | (string | URL)[];
+    url?: ImportableURL | ImportableURL[];
 }
 
 export interface Service extends ScriptWorker, WorkerOptions {
@@ -76,10 +78,18 @@ export interface HttpsSocket extends Socket, HttpOptions {
 
 export type SocketType = HttpSocket | HttpsSocket;
 
+export interface Extension {
+    url: ImportableURL | ImportableURL[];
+    name?: string;
+}
+
+export type ExtensionType = Extension | ImportableURL;
+
 export interface Config {
     url?: string;
     services?: NamedService[];
     sockets?: SocketType[];
+    extensions?: ExtensionType[];
 }
 
 const example: Config = {
