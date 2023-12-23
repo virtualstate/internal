@@ -10,6 +10,7 @@ import {ServiceWorkerWorkerData} from "./worker";
 export interface ServiceWorkerFetchOptions {
     tag?: string;
     entrypoint?: string;
+    entrypointArguments?: string[];
     dispatch?: string | DurableEventData;
 }
 
@@ -66,6 +67,7 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
         virtual: true,
         dispatch: options?.dispatch,
         entrypoint: options?.entrypoint,
+        entrypointArguments: options?.entrypointArguments
     }, serviceWorkerInit);
 }
 

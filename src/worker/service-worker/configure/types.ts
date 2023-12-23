@@ -41,6 +41,7 @@ export interface Service extends ScriptWorker, WorkerOptions {
 
 export interface ServiceEntrypoint extends Service {
     entrypoint?: string;
+    entrypointArguments?: string[];
 }
 
 export interface NamedService extends Service {
@@ -121,7 +122,8 @@ const example: Config = {
                     name: "./requested/resource.json",
                     service: {
                         name: "named",
-                        entrypoint: "getRequestedResource"
+                        entrypoint: "getRequestedResource",
+                        entrypointArguments: ["request", "$event", "SPECIAL_CONTEXT_KEY"]
                     }
                 },
                 {

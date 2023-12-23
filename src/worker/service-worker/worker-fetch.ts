@@ -81,7 +81,8 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
         const entrypoint = getBindingServiceEntrypoint(binding);
         return fetch(input, {
             ...init,
-            entrypoint: entrypoint.entrypoint
+            entrypoint: entrypoint.entrypoint,
+            entrypointArguments: entrypoint.entrypointArguments
         });
     }
 
