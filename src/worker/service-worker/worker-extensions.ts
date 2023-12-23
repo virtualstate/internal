@@ -2,6 +2,8 @@ import {Config, ExtensionType} from "./configure";
 
 export async function importWorkerExtensions(config: Config) {
     if (!config.extensions) return;
+    const now = Date.now().toString();
+
     for (const extension of config.extensions) {
         await importWorkerExtension(extension);
     }
@@ -17,11 +19,9 @@ export async function importWorkerExtensions(config: Config) {
             const urls = Array.isArray(extension.url) ? extension.url : [extension.url];
             for (const url of urls) {
                 const instance = new URL(url, config.url);
-                instance.searchParams.set("importCacheBust", Date.now().toString());
+                instance.searchParams.set("importCacheBust", now);
                 await import(instance.toString());
             }
         }
-
-
     }
 }

@@ -38,5 +38,8 @@
             "service": "offers",
             "address": "*:3000"
         }
+    ],
+    "extensions": [
+        "./extension.js"
     ]
 }
