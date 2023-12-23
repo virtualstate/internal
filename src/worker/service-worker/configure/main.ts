@@ -20,6 +20,8 @@ async function read(stream: typeof process.stdin) {
     return Buffer.concat(chunks).toString("utf8");
 }
 
+process.on("unhandledRejection", console.error);
+
 const argv = [...process.argv];
 
 let configUrl: string | Config;

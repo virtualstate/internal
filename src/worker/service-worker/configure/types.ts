@@ -54,9 +54,9 @@ export type ServiceEntrypointOption =
 
 export interface Socket {
     address: string;
+    service: ServiceEntrypointOption;
     type?: string;
     name?: string;
-    service?: ServiceEntrypointOption;
     routes?: AddRoutesOptions;
 }
 
@@ -96,8 +96,13 @@ export interface Config {
 const example: Config = {
     services: [
         {
+          // Name only, would be mapped as `url: "./named.js"` automatically
+          // is used with an entrypoint later
+          name: "named",
+        },
+        {
             name: "example",
-            url: "./",
+            url: "./example.js",
             bindings: [
                 {
                     name: "./",
@@ -131,8 +136,16 @@ const example: Config = {
                     data: new Blob([new TextEncoder().encode("a,b,c\n1,2,3")], { type: "text/csv" })
                 },
                 {
-                    name: "./blob.text.csv",
+                    name: "./blob.array.csv",
+                    data: new TextEncoder().encode("a,b,c\n1,2,3")
+                },
+                {
+                    name: "./blob.data.csv",
                     data: "a,b,c\n1,2,3"
+                },
+                {
+                    name: "./blob.text.csv",
+                    text: "a,b,c\n1,2,3"
                 }
             ]
         }
@@ -156,10 +169,7 @@ const example: Config = {
                     source: "fetch-event"
                 }
             ],
-        },
-        {
-            // Default same directory service
-            address: "*:3003"
+            service: "example"
         }
     ]
 }

@@ -262,7 +262,7 @@ export class DurableServiceWorkerContainer {
 
     async register(url: string, options?: RegistrationOptions) {
         const instance = new URL(url, getServiceWorkerUrl());
-        ok(instance.protocol === "file:", "Only file service workers supported at this time");
+        ok(instance.protocol === "file:" || instance.protocol === "data:", "Only file and data service workers supported at this time");
         const store = getServiceWorkerRegistrationStore(this.internalBucket);
         const envId = url === SERVICE_WORKER_URL ? SERVICE_WORKER_ID : undefined;
         const serviceWorkerId = envId ?? getServiceWorkerId(instance.toString());
@@ -276,7 +276,9 @@ export class DurableServiceWorkerContainer {
         }
         const workerOrigin = instance.protocol === "file:" ?
             getOrigin() :
-            instance.origin;
+            !instance.origin || instance.origin === "null" ?
+                getOrigin() :
+                instance.origin;
         const origin = options?.scope ?
             new URL(options.scope, workerOrigin).origin :
             workerOrigin;
