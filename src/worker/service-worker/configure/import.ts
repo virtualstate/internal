@@ -255,6 +255,7 @@ async function initialiseSocket(config: Config, socket: Socket, getService: Serv
         ok(request instanceof Request);
 
         respondWith(executeServiceWorkerFetchEvent(service.registration, {
+            ...rest,
             type: "fetch",
             request: fromRequestWithSourceBody(request),
             virtual: true

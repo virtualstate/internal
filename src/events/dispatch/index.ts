@@ -1,6 +1,7 @@
 import {on, dispatchEvent} from "../schedule";
 import type {DurableEventData, UnknownEvent} from "../../data";
-import {isLike} from "../../is";
+import {isLike, ok} from "../../is";
+import {getServiceWorkerModuleExports} from "../../worker/service-worker/worker-exports";
 
 const DISPATCH = "dispatch" as const;
 type DispatchEventType = typeof DISPATCH;
@@ -8,6 +9,8 @@ type DispatchEventType = typeof DISPATCH;
 export interface DispatchEvent extends DurableEventData {
     type: DispatchEventType;
     dispatch: DurableEventData | DurableEventData[];
+    entrypoint?: string;
+    entrypointArguments?: string[];
 }
 
 export function isDispatchEvent(event?: UnknownEvent): event is DispatchEvent {
@@ -41,15 +44,43 @@ export async function onDispatchEvent(event: UnknownEvent) {
     let dispatching: DurableEventData = {
         ...event.dispatch
     };
-    if (!dispatching.durableEventId) {
-        dispatching.virtual = true;
+
+    const entrypointArguments = event.entrypointArguments;
+    async function dispatchEntrypointEvent(entrypoint: unknown) {
+        ok(typeof entrypoint === "function", "Expected entrypoint to be a function");
+        if (entrypointArguments) {
+            const dispatchArguments = entrypointArguments.map(
+                key => key === "$event" ? dispatching : dispatching[key]
+            );
+            return entrypoint(...dispatchArguments);
+        } else {
+            ok<typeof dispatchEvent>(entrypoint);
+            return entrypoint(dispatching);
+        }
     }
-    if (!dispatching.virtual && !dispatching.schedule) {
-        dispatching.schedule = {
-            immediate: true
-        };
+
+    if (event.entrypoint) {
+        const entrypoints = getServiceWorkerModuleExports();
+        if (typeof entrypoints[event.entrypoint] === "function") {
+            await dispatchEntrypointEvent(entrypoints[event.entrypoint])
+        } else if (isLike<{ default: Record<string, unknown> }>(entrypoints) && entrypoints.default && typeof entrypoints.default[event.entrypoint] === "function") {
+            await dispatchEntrypointEvent(entrypoints.default[event.entrypoint])
+        } else {
+            throw new Error(`Unknown entrypoint ${event.entrypoint}`);
+        }
+    } else {
+
+        if (!dispatching.durableEventId) {
+            dispatching.virtual = true;
+        }
+        if (!dispatching.virtual && !dispatching.schedule) {
+            dispatching.schedule = {
+                immediate: true
+            };
+        }
+
+        await dispatchEvent(dispatching);
     }
-    await dispatchEvent(dispatching);
 }
 
 export const removeDispatchScheduledFunction = on(DISPATCH, onDispatchEvent);
