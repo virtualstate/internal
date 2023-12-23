@@ -112,7 +112,7 @@ export type RouterRuleSource =
 
 export interface RouterRule {
     condition: RouterCondition | RouterCondition[]
-    source: RouterRuleSource | RouterRuleSource[];
+    source?: RouterRuleSource | RouterRuleSource[];
 }
 
 export type AddRoutesOptions = RouterRule | RouterRule[]
@@ -463,7 +463,7 @@ export async function createRouter(serviceWorkers: DurableServiceWorkerRegistrat
         const { serviceWorker, route } = found;
 
 
-        return sources(route.source);
+        return sources(route.source ?? "fetch-event");
 
         async function sources(ruleSource: RouterRuleSource | RouterRuleSource[]) {
             if (Array.isArray(ruleSource)) {

@@ -6,7 +6,7 @@ import {createServiceWorkerWorker, Pushable} from "../execute";
 import {DurableEventData, fromDurableResponse, fromRequest, fromRequestWithSourceBody} from "../../../data";
 import {listen} from "../start";
 import {FetchResponseMessage} from "../dispatch";
-import {getImportUrlSourceForService} from "../worker-service-url";
+import {getImportUrlSourceForService, getMaybeFunctionURL} from "../worker-service-url";
 import {
     createServiceWorkerFetch,
     executeServiceWorkerFetch,
@@ -149,12 +149,14 @@ async function initialiseServices(config: Config) {
 
 export interface ImportConfigurationOptions {
     virtual?: boolean;
+    noStringifyConfig?: boolean
+    install?: boolean | string | string[];
 }
 
 /**
  * Import configuration and initiate services
  */
-export async function importConfiguration(source: string | URL | Config, { virtual }: ImportConfigurationOptions = {}) {
+export async function importConfiguration(source: string | URL | Config, { virtual, noStringifyConfig, install }: ImportConfigurationOptions = {}) {
     let config: Config;
     if (typeof source === "string" || source instanceof URL) {
         config = await importConfigModule(source);
@@ -163,7 +165,49 @@ export async function importConfiguration(source: string | URL | Config, { virtu
         config = source;
         ok(config.url, "Must give base url for config if provided directly");
     }
+
+    // This saves us from creating these values multiple times...
+    // ... is okay to use parse/stringify... isn't the best but that is okay
+    if (!noStringifyConfig) {
+        config = JSON.parse(
+            JSON.stringify(
+                config,
+                (key, value) => {
+                    if (key === "url" && typeof value === "function") {
+                        return getMaybeFunctionURL(value);
+                    }
+                    return value;
+                }
+            )
+        );
+    }
+
     const getService = await initialiseServices(config);
+
+    // Installs and activates all workers before listening or continuing.
+    // This will give service workers a point of
+    if ((install || config.install) && config.services?.length) {
+        const installServices = typeof install === "string" ?
+            [install] :
+            Array.isArray(install) ? install :
+            typeof config.install === "string" ?
+                [config.install] :
+                Array.isArray(config.install) ? config.install : [];
+        const installAllServices = (
+            (install === true || !install) &&
+            (config.install === true || !config.install)
+        );
+        await Promise.all(
+            config.services.map(
+                async service => {
+                    if (installAllServices || !installServices.includes(service.name)) {
+                        const { activated } = await getService(service);
+                        await activated;
+                    }
+                }
+            )
+        )
+    }
 
     const fetch = createSocketFetch(config, getService);
 

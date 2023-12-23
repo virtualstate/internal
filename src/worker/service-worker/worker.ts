@@ -24,6 +24,8 @@ import {Config, Service} from "./configure/types";
 import {globalFetch} from "./global-fetch";
 import { createServiceWorkerWorkerFetch } from "./worker-fetch";
 import {importWorkerExtensions} from "./worker-extensions";
+import {DurableServiceWorkerScope} from "./types";
+import {ok} from "../../is";
 
 declare var _ORIGINAL_GLOBAL_FETCH: typeof fetch;
 
@@ -49,7 +51,12 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         return imported;
     }
 
-    Object.assign(globalThis, {
+    ok<DurableServiceWorkerScope["addEventListener"]>(addEventListener);
+    ok<DurableServiceWorkerScope["removeEventListener"]>(removeEventListener);
+    const globalSelf: unknown = globalThis;
+    ok<DurableServiceWorkerScope>(globalSelf);
+
+    const scope: DurableServiceWorkerScope & Record<string, unknown> = {
         _ORIGINAL_GLOBAL_FETCH: globalFetch,
         _GLOBAL_getServiceWorkerModuleExports: getServiceWorkerModuleExports,
         registration,
@@ -58,23 +65,26 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         sync,
         periodicSync,
         serviceWorker,
-        self: globalThis,
+        self: globalSelf,
         isSecureContext: protocol === "https:",
         origin: origin || getOrigin(),
         addEventListener,
         removeEventListener,
         fetch: createServiceWorkerWorkerFetch(data, registration)
-    });
-
-    await import("./dispatchers");
-
-    if (data.config?.extensions) {
-        await importWorkerExtensions(data.config);
     }
 
+    Object.assign(globalThis, scope);
+
+    await import("./dispatchers");
+    await importWorkerExtensions(data.config, data.config.extensions, scope);
     const url = new URL(registration.durable.url, registration.durable.baseURL);
     url.searchParams.set("importCacheBust", Date.now().toString());
     imported = await import(url.toString());
+
+    if (Array.isArray(data.service?.url)) {
+        const rest = data.service.url.slice(1);
+        await importWorkerExtensions(data.config, rest, scope);
+    }
 
     if (registration.durable.registrationState === "pending" || registration.durable.registrationState === "installing") {
         try {

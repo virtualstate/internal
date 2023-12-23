@@ -1,11 +1,12 @@
 import {AddRoutesOptions} from "../router";
+import {DurableServiceWorkerScope} from "../types";
 
 export interface WorkerParameter {
     type: keyof WorkerBindingSourceOptions | string;
     optional?: boolean;
 }
 
-type ImportableURL = string | URL;
+export type ImportableURL = string | URL | ((self: DurableServiceWorkerScope) => Promise<void | unknown> | void | unknown);
 
 export interface WorkerBindingSourceOptions {
     text?: string;
@@ -91,6 +92,8 @@ export interface Config {
     services?: NamedService[];
     sockets?: SocketType[];
     extensions?: ExtensionType[];
+    // Install all or specific named services
+    install?: boolean | string | string[];
 }
 
 const example: Config = {

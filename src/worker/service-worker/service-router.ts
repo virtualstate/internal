@@ -1,11 +1,14 @@
 import {ServiceWorkerWorkerData} from "./worker";
-import type {Config, Service, WorkerBinding} from "./configure";
+import type {Config, ImportableURL, Service, WorkerBinding} from "./configure";
 import {DurableServiceWorkerRegistration} from "./container";
 import {AddRoutesOptions, isRouteMatchCondition} from "./router";
-import {getImportUrlSourceForService} from "./worker-service-url";
+import {getImportUrlSourceForService, getMaybeFunctionURL} from "./worker-service-url";
 import {getURLSource} from "./url";
 
-export function getServiceBindingURL(input: URL | RequestInfo, service: Service, config: Config) {
+export function getServiceBindingURL(input: ImportableURL | RequestInfo, service: Service, config: Config) {
+    if (typeof input === "function") {
+        return new URL(getMaybeFunctionURL(input));
+    }
     const source = getURLSource(input);
     if (source instanceof URL) {
         return source;
@@ -84,7 +87,7 @@ function isRoutesMatchCondition(serviceWorker: DurableServiceWorkerRegistration,
     if (Array.isArray(routes)) {
         for (const route of routes) {
             if (isRouteMatchCondition(serviceWorker.durable, route, input, init)) {
-                return
+                return true;
             }
         }
         return false;

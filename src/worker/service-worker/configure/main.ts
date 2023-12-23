@@ -51,7 +51,11 @@ if (configUrl.startsWith("{") && configUrl.endsWith("}")) {
 }
 
 try {
-    await importConfiguration(configUrl);
+    await importConfiguration(configUrl, {
+        noStringifyConfig: argv.includes("--no-stringify-config"),
+        virtual: argv.includes("--virtual"), // Forces NO listeners
+        install: argv.includes("--install")
+    });
 } catch (error) {
     console.error(error);
     process.exit(1);

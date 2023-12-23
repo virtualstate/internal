@@ -1,4 +1,4 @@
-import {DurableServiceWorkerRegistration} from "./container";
+import {DurableServiceWorkerContainer, DurableServiceWorkerRegistration} from "./container";
 import {DurableCacheStorage, ExtendableEvent, FetchEvent} from "../../fetch";
 import {DurableContentIndex} from "../../content-index";
 import {SyncEvent} from "../../sync";
@@ -14,7 +14,7 @@ export interface DurableServiceWorkerScope {
     registration: DurableServiceWorkerRegistration,
     caches: DurableCacheStorage,
     index: DurableContentIndex,
-    serviceWorker: ServiceWorkerContainer
+    serviceWorker: DurableServiceWorkerContainer,
     self: DurableServiceWorkerScope,
     isSecureContext: boolean
     origin: string
@@ -25,5 +25,5 @@ export interface DurableServiceWorkerScope {
     addEventListener(type: "sync", fn: (message: SyncEvent) => void): void;
     addEventListener(type: "periodicsync", fn: (message: PeriodicSyncEvent) => void): void;
     addEventListener(type: string, fn: (event: DurableEventData) => void): void;
-    removeEventListener: typeof removeEventListener
+    removeEventListener: typeof removeEventListener;
 }
