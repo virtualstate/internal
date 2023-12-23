@@ -1,7 +1,6 @@
 import {getOrigin} from "../listen";
 import {dirname, join} from "node:path";
-import {isLike, ok} from "../is";
-import {getConfig} from "../config";
+import {ok} from "../is";
 import type {Worker, WorkerOptions} from "node:worker_threads";
 
 async function getDefaultNodeWorker(url: string, options: WorkerOptions): Promise<Worker> {
