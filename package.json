@@ -75,6 +75,9 @@
     "./main": "./esnext/main.js",
     "./start": "./esnext/start.js"
   },
+  "bin": {
+    "vork": "./esnext/worker/service-worker/configure/main.js"
+  },
   "imports": {
     "@virtualstate/internal": "./esnext/index.js"
   },
@@ -249,7 +252,8 @@
     "seed": "node --enable-source-maps esnext/data/seed/main.js",
     "watch": "yarn build && concurrently --raw \"yarn start:nodemon\" \"yarn build:watch\" ",
     "prettier:check": "prettier --check .",
-    "prettier": "prettier --write ."
+    "prettier": "prettier --write .",
+    "vork": "node ./esnext/worker/service-worker/configure/main.js"
   },
   "importmap": {
     "root": "esnext/imports",
