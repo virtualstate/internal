@@ -48,4 +48,9 @@ if (configUrl.startsWith("{") && configUrl.endsWith("}")) {
     configUrl = join(process.cwd(), configUrl);
 }
 
-await importConfiguration(configUrl);
+try {
+    await importConfiguration(configUrl);
+} catch (error) {
+    console.error(error);
+    process.exit(1);
+}

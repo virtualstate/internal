@@ -1,7 +1,7 @@
-import {DurableFetchEventCache, DurableFetchEventData} from "../../fetch";
+import {DurableFetchEventData} from "../../fetch";
 import {DurableEventData, DurableRequestData, fromDurableResponse, fromRequest, getFetchHeadersObject} from "../../data";
-import {executeServiceWorkerWorker} from "./execute";
-import {isLike, ok} from "../../is";
+import {Pushable, createServiceWorkerWorker, executeServiceWorkerWorker} from "./execute";
+import {isLike} from "../../is";
 import type {FetchResponseMessage} from "./dispatch";
 import type {DurableServiceWorkerRegistration} from "./container";
 import {getOrigin} from "../../listen/config";
@@ -21,8 +21,10 @@ export interface FetchFn {
     (input: RequestInfo | URL, init?: FetchInit): Promise<Response>
 }
 
-export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>): FetchFn {
-    return (input, init) => {
+export function createServiceWorkerFetch(registration: DurableServiceWorkerRegistration, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>, pushable?: Pushable<ServiceWorkerWorkerData, unknown>): FetchFn {
+    let workerPromise: Promise<Pushable<ServiceWorkerWorkerData, unknown>> | undefined = undefined;
+    return async (input, init) => {
+        workerPromise = workerPromise || (pushable ? undefined: createServiceWorkerWorker());
         let request: Request | DurableRequestData;
         if (input instanceof Request) {
             request = input
@@ -49,12 +51,13 @@ export function createServiceWorkerFetch(registration: DurableServiceWorkerRegis
             registration,
             request,
             init,
-            serviceWorkerInit
+            serviceWorkerInit,
+            pushable ?? await workerPromise
         );
     }
 }
 
-export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData, options?: ServiceWorkerFetchOptions, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>) {
+export async function executeServiceWorkerFetch(registration: DurableServiceWorkerRegistration, request: Request | DurableRequestData, options?: ServiceWorkerFetchOptions, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>, pushable?: Pushable<ServiceWorkerWorkerData, unknown>) {
     return executeServiceWorkerFetchEvent(registration, {
         type: "fetch",
         request: request instanceof Request ?
@@ -66,15 +69,22 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
     }, serviceWorkerInit);
 }
 
-export async function executeServiceWorkerFetchEvent(registration: DurableServiceWorkerRegistration, event: DurableFetchEventData, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>) {
+export async function executeServiceWorkerFetchEvent(registration: DurableServiceWorkerRegistration, event: DurableFetchEventData, serviceWorkerInit?: Partial<ServiceWorkerWorkerData>, pushable?: Pushable<ServiceWorkerWorkerData, unknown>) {
     const { MessageChannel } = await import("node:worker_threads");
 
-    const data = executeServiceWorkerWorker({
+    let data: AsyncIterable<unknown>;
+    const input: ServiceWorkerWorkerData = {
         ...serviceWorkerInit,
         serviceWorkerId: registration.durable.serviceWorkerId,
         event,
         channel: new MessageChannel()
-    });
+    };
+
+    if (pushable) {
+        data = pushable.push(input);
+    } else {
+        data = executeServiceWorkerWorker(input);
+    }
 
     const iterator = data[Symbol.asyncIterator]();
 

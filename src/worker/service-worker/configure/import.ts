@@ -2,7 +2,7 @@ import {Config, Socket, Service, ServiceEntrypointOption} from "./types";
 import {isLike, ok} from "../../../is";
 import {SERVICE_WORKER_LISTEN_HOSTNAME} from "../../../config";
 import {DurableServiceWorkerRegistration, serviceWorker} from "../container";
-import {createServiceWorkerWorker} from "../execute";
+import {createServiceWorkerWorker, Pushable} from "../execute";
 import {DurableEventData, fromDurableResponse, fromRequest, fromRequestWithSourceBody} from "../../../data";
 import {listen} from "../start";
 import {FetchResponseMessage} from "../dispatch";
@@ -16,6 +16,7 @@ import {
 import {getURLSource} from "../url";
 import {getOrigin} from "../../../listen";
 import {isRouteMatchCondition} from "../router";
+import {ServiceWorkerWorkerData} from "../worker";
 
 async function importConfigModule(url: string | URL) {
     const instance = url instanceof URL ? url : new URL(url, "file:///");
@@ -38,6 +39,7 @@ interface ServiceWorkerEventFn {
 }
 
 interface ServiceWorkerContext {
+    pushable: Pushable<ServiceWorkerWorkerData, unknown>;
     service: Service;
     registration: DurableServiceWorkerRegistration;
     activated: Promise<ServiceWorkerEventFn>;
@@ -88,14 +90,16 @@ async function initialiseServices(config: Config) {
     async function initialiseService(service: Service) {
         const url = getImportUrlSourceForService(service, config);
         const registration = await serviceWorker.register(url)
+        const pushable = await createServiceWorkerWorker();
         const context: ServiceWorkerContext = {
+            pushable,
             service,
             registration,
-            activated: activateService(registration, service),
+            activated: activateService(registration, service, pushable),
             fetch: createServiceWorkerFetch(registration, {
                 config,
                 service
-            })
+            }, pushable)
         }
         const contextPromise = Promise.resolve(context);
         namedServices[registration.durable.serviceWorkerId] = contextPromise;
@@ -105,13 +109,14 @@ async function initialiseServices(config: Config) {
         return context;
     }
 
-    async function activateService(registration: DurableServiceWorkerRegistration, service: Service) {
-        const worker = await createServiceWorkerWorker();
-        await worker.push({
-            serviceWorkerId: registration.durable.serviceWorkerId,
-            config,
-            service
-        });
+    async function activateService(registration: DurableServiceWorkerRegistration, service: Service, worker: Pushable<ServiceWorkerWorkerData, unknown>) {
+        if (!registration.active) {
+            await worker.push({
+                serviceWorkerId: registration.durable.serviceWorkerId,
+                config,
+                service
+            });
+        }
         let queue: Promise<void> | undefined = undefined;
         return async (event: DurableEventData) => {
             // TODO multiply worker if if progress instead of a queue which can lock
@@ -243,7 +248,6 @@ async function initialiseSocket(config: Config, socket: Socket, getService: Serv
 
     const service = await getService(socket.service);
 
-    const dispatch = await service.activated;
 
     async function fetchDispatch(event: DurableEventData) {
         const { handled, respondWith, signal, request, ...rest } = event;
@@ -279,6 +283,7 @@ async function initialiseSocket(config: Config, socket: Socket, getService: Serv
         if (event.type === "fetch") {
             return fetchDispatch(event);
         } else {
+            const dispatch = await service.activated;
             await dispatch(event);
         }
         return { type: "service:listener:handled" }

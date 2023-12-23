@@ -253,7 +253,8 @@
     "watch": "yarn build && concurrently --raw \"yarn start:nodemon\" \"yarn build:watch\" ",
     "prettier:check": "prettier --check .",
     "prettier": "prettier --write .",
-    "vork": "node ./esnext/worker/service-worker/configure/main.js"
+    "vork": "node ./esnext/worker/service-worker/configure/main.js",
+    "bork": "bun ./esnext/worker/service-worker/configure/main.js"
   },
   "importmap": {
     "root": "esnext/imports",
