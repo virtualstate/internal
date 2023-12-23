@@ -3,16 +3,7 @@
     "services": [
         {
             "name": "prices",
-            "json": [
-                {
-                    "productId": "apples",
-                    "value": 2
-                },
-                {
-                    "productId": "pears",
-                    "value": 2.5
-                }
-            ]
+            "url": "./prices.js"
         },
         {
             "name": "products",
@@ -28,7 +19,16 @@
                 },
                 {
                     "protocol": "prices",
-                    "service": "prices"
+                    "json": [
+                        {
+                            "productId": "apples",
+                            "value": 2
+                        },
+                        {
+                            "productId": "pears",
+                            "value": 2.5
+                        }
+                    ]
                 }
             ]
         }
