@@ -145,7 +145,8 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
                     persist: true // Persist as queue may be out of process
                 }),
                 dispatch: init.dispatch,
-                entrypoint: serviceEntrypoint.entrypoint
+                entrypoint: serviceEntrypoint.entrypoint,
+                entrypointArguments: serviceEntrypoint.entrypointArguments
             });
             return new Response(null, { status: 204 });
         }
