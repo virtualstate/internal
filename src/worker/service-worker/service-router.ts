@@ -80,7 +80,8 @@ export function isServiceMatchCondition(serviceWorker: DurableServiceWorkerRegis
         return getServiceBindingURL(binding.name, service, config).toString() === url.toString();
     }
 
-    return false
+    // Binding with no match condition, is a catch all
+    return true;
 }
 
 function isRoutesMatchCondition(serviceWorker: DurableServiceWorkerRegistration, routes: AddRoutesOptions, input: RequestInfo | URL, init?: RequestInit) {

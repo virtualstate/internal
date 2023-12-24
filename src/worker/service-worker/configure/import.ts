@@ -200,7 +200,7 @@ export async function importConfiguration(source: string | URL | Config, { virtu
         await Promise.all(
             config.services.map(
                 async service => {
-                    if (installAllServices || !installServices.includes(service.name)) {
+                    if (installAllServices || installServices.includes(service.name)) {
                         const { activated } = await getService(service);
                         await activated;
                     }

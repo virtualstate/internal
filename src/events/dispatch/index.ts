@@ -59,17 +59,7 @@ export async function onDispatchEvent(event: UnknownEvent) {
         }
     }
 
-    if (event.entrypoint) {
-        const entrypoints = getServiceWorkerModuleExports();
-        if (typeof entrypoints[event.entrypoint] === "function") {
-            await dispatchEntrypointEvent(entrypoints[event.entrypoint])
-        } else if (isLike<{ default: Record<string, unknown> }>(entrypoints) && entrypoints.default && typeof entrypoints.default[event.entrypoint] === "function") {
-            await dispatchEntrypointEvent(entrypoints.default[event.entrypoint])
-        } else {
-            throw new Error(`Unknown entrypoint ${event.entrypoint}`);
-        }
-    } else {
-
+    async function dispatch() {
         if (!dispatching.durableEventId) {
             dispatching.virtual = true;
         }
@@ -80,6 +70,20 @@ export async function onDispatchEvent(event: UnknownEvent) {
         }
 
         await dispatchEvent(dispatching);
+    }
+
+    if (event.entrypoint) {
+        const entrypoints = getServiceWorkerModuleExports();
+        if (typeof entrypoints[event.entrypoint] === "function") {
+            await dispatchEntrypointEvent(entrypoints[event.entrypoint])
+        } else if (isLike<{ default: Record<string, unknown> }>(entrypoints) && entrypoints.default && typeof entrypoints.default[event.entrypoint] === "function") {
+            await dispatchEntrypointEvent(entrypoints.default[event.entrypoint])
+        } else {
+            // If entrypoint isn't available, dispatch as normal event
+            await dispatch();
+        }
+    } else {
+        await dispatch();
     }
 }
 

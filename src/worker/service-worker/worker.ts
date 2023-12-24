@@ -91,7 +91,9 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
             // console.log("Installing service worker");
             await setRegistrationStatus( "installing");
             await dispatchEvent({
-                type: "install",
+                type: "dispatch",
+                dispatch: "install",
+                entrypoint: "install",
                 virtual: true
             });
             // console.log("Installed service worker");
@@ -105,7 +107,9 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         try {
             await setRegistrationStatus( "activating");
             await dispatchEvent({
-                type: "activate",
+                type: "dispatch",
+                dispatch: "activate",
+                entrypoint: "activate",
                 virtual: true
             });
             await setRegistrationStatus( "activated");
@@ -116,7 +120,9 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     // console.log(registration.durable.registrationState);
     if (registration.durable.registrationState === "activated") {
         await dispatchEvent({
-            type: "activated",
+            type: "dispatch",
+            dispatch: "activated",
+            entrypoint: "activated",
             virtual: true
         });
 

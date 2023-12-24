@@ -24,7 +24,7 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
     const bindingFetchers = new WeakMap<WorkerBinding, Promise<FetchFn>>();
 
     function getBindingServiceEntrypoint(binding: WorkerBinding) {
-        let serviceName = binding.service || binding.protocol || binding.name;
+        let serviceName = binding.service || binding.protocol || binding.queue || binding.name;
         if (!serviceName) {
             throw new Error("Expected binding to have service name")
         }
@@ -149,7 +149,8 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
                 }),
                 dispatch: init.dispatch,
                 entrypoint: serviceEntrypoint.entrypoint,
-                entrypointArguments: serviceEntrypoint.entrypointArguments
+                entrypointArguments: serviceEntrypoint.entrypointArguments,
+                virtual: true
             });
             return new Response(null, { status: 204 });
         }
