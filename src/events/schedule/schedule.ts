@@ -6,7 +6,7 @@ export interface ScheduledFn {
 }
 
 export interface DispatchEventFn {
-    (event: DurableEventData): Promise<void>
+    (event: DurableEventData): Promise<void> | void
 }
 
 export interface DispatcherFn {
@@ -26,6 +26,7 @@ export interface ScheduledOptions<F = ScheduledFn> {
     cron?: string;
     on?: string;
     handler: F;
+    extend?: boolean;
 }
 
 export interface ScheduledConfig {
@@ -80,7 +81,21 @@ export function createScheduledFunction(optionsOrFn: ScheduledOptions | Schedule
 export function createDispatcherFunction(optionsOrFn: ScheduledOptions<DispatcherFn> | DispatcherFn) {
     const options = parseScheduleOptions(optionsOrFn);
     const id = getScheduledFunctionCorrelation(options);
-    DISPATCHER_FUNCTIONS.set(id, options);
+    const existing = DISPATCHER_FUNCTIONS.get(id);
+    if (options.extend || existing?.extend) {
+        DISPATCHER_FUNCTIONS.set(id, {
+            ...existing,
+            ...options,
+            handler(event, dispatcher) {
+                return existing.handler(
+                    event,
+                    (event) => options.handler(event, dispatcher)
+                );
+            }
+        })
+    } else {
+        DISPATCHER_FUNCTIONS.set(id, options);
+    }
     return () => {
         if (DISPATCHER_FUNCTIONS.get(id) === options) {
             DISPATCHER_FUNCTIONS.delete(id);
