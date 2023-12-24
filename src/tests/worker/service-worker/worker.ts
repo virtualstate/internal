@@ -7,6 +7,7 @@ declare var self: DurableServiceWorkerScope;
 console.log("in test service worker");
 
 self.addEventListener("install", event => {
+    console.log("Ran install", event);
     event.addRoutes([
         {
             condition: {
@@ -36,7 +37,7 @@ self.addEventListener("activate", event => {
 })
 
 self.addEventListener("fetch", event => {
-    console.log("In fetch handler!", event.tag || "untagged");
+    console.log("In fetch handler!", event.tag || "untagged", event.respondWith);
     event.respondWith(onFetchEvent(event));
 });
 

@@ -54,9 +54,11 @@ const worker = join(dirname(pathname), "./worker.js");
 {
     const registration = await serviceWorker.register(worker);
 
+    ok(registration.active, "Expected registration to be active");
+
     const routes = await listRoutes(registration.durable.serviceWorkerId);
 
-    ok(routes.length);
+    ok(routes.length, "Expected routes to be initiated");
 
     const fetch = await createRouter([
         registration

@@ -76,12 +76,12 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     Object.assign(globalThis, scope);
 
     await import("./dispatchers");
-    await importWorkerExtensions(data.config, data.config.extensions, scope);
+    await importWorkerExtensions(data.config, data.config?.extensions, scope);
     const url = new URL(registration.durable.url, registration.durable.baseURL);
     url.searchParams.set("importCacheBust", Date.now().toString());
     imported = await import(url.toString());
 
-    if (Array.isArray(data.service?.url)) {
+    if (data.config && Array.isArray(data.service?.url)) {
         const rest = data.service.url.slice(1);
         await importWorkerExtensions(data.config, rest, scope);
     }

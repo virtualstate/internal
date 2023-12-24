@@ -169,17 +169,7 @@ export async function importConfiguration(source: string | URL | Config, { virtu
     // This saves us from creating these values multiple times...
     // ... is okay to use parse/stringify... isn't the best but that is okay
     if (!noStringifyConfig) {
-        config = JSON.parse(
-            JSON.stringify(
-                config,
-                (key, value) => {
-                    if (key === "url" && typeof value === "function") {
-                        return getMaybeFunctionURL(value);
-                    }
-                    return value;
-                }
-            )
-        );
+        replaceFunctions(config);
     }
 
     const getService = await initialiseServices(config);
@@ -342,4 +332,20 @@ async function initialiseSocket(config: Config, socket: Socket, getService: Serv
             hostname,
         },
     }, variableDispatch);
+}
+
+function replaceFunctions(value: unknown): void {
+    if (!value) return;
+    if (Array.isArray(value)) {
+        return value.forEach(replaceFunctions);
+    }
+    if (typeof value !== "object") return;
+    for (const [key, nextValue] of Object.entries(value)) {
+        if (key === "url" && typeof nextValue === "function") {
+            Object.assign(value, { [key]: getMaybeFunctionURL(nextValue) })
+        } else {
+            replaceFunctions(nextValue);
+        }
+    }
+
 }

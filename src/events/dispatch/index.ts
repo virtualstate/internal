@@ -2,6 +2,7 @@ import {on, dispatchEvent} from "../schedule";
 import type {DurableEventData, UnknownEvent} from "../../data";
 import {isLike, ok} from "../../is";
 import {getServiceWorkerModuleExports} from "../../worker/service-worker/worker-exports";
+import {getDispatcherFunction} from "../schedule/schedule";
 
 const DISPATCH = "dispatch" as const;
 type DispatchEventType = typeof DISPATCH;
@@ -36,26 +37,42 @@ export async function onDispatchEvent(event: UnknownEvent) {
         })));
         return;
     }
-    if (event.dispatch.type === "dispatch") {
+    let dispatching: DurableEventData;
+
+    if (typeof event.dispatch === "string") {
+        dispatching = {
+            type: event.dispatch
+        };
+    } else {
+        dispatching = {
+            ...event.dispatch
+        };
+    }
+
+    if (dispatching.type === "dispatch") {
         // This is to prevent infinite loops
         console.warn("dispatch cannot be used to dispatch additional events");
         return;
     }
-    let dispatching: DurableEventData = {
-        ...event.dispatch
-    };
 
     const entrypointArguments = event.entrypointArguments;
     async function dispatchEntrypointEvent(entrypoint: unknown) {
-        ok(typeof entrypoint === "function", "Expected entrypoint to be a function");
-        if (entrypointArguments) {
-            const dispatchArguments = entrypointArguments.map(
-                key => key === "$event" ? dispatching : dispatching[key]
-            );
-            return entrypoint(...dispatchArguments);
-        } else {
-            ok<typeof dispatchEvent>(entrypoint);
-            return entrypoint(dispatching);
+        const dispatcher = getDispatcherFunction({
+            event: dispatching
+        });
+        dispatcher.handler(dispatching, dispatch);
+
+        function dispatch(dispatching: DurableEventData) {
+            ok(typeof entrypoint === "function", "Expected entrypoint to be a function");
+            if (entrypointArguments) {
+                const dispatchArguments = entrypointArguments.map(
+                    key => key === "$event" ? dispatching : dispatching[key]
+                );
+                return entrypoint(...dispatchArguments);
+            } else {
+                ok<typeof dispatchEvent>(entrypoint);
+                return entrypoint(dispatching);
+            }
         }
     }
 

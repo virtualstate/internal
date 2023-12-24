@@ -13,3 +13,6 @@ workerd-tests
 workerd-tests.capnp
 .cache
 .vercel
+kv.db
+kv.db-shm
+kv.db-wal

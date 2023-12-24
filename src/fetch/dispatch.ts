@@ -8,7 +8,7 @@ import {
     fromRequestResponse,
     setDurableRequestForEvent
 } from "../data";
-import {dispatcher} from "../events/schedule/schedule";
+import {dispatcher, getDispatcherFunction} from "../events/schedule/schedule";
 import {v4} from "uuid";
 import {caches} from "./cache";
 import {dispatchEvent} from "../events/schedule/event";
@@ -236,35 +236,41 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
         const entrypointArguments = event.entrypointArguments;
 
         async function dispatchServiceWorkerFnRequest(fn: unknown, fnError = "Expected entrypoint to be a function") {
-            ok(typeof fn === "function", fnError);
+            const dispatcher = getDispatcherFunction({
+                event: requestEvent
+            });
+            dispatcher.handler(requestEvent, dispatch);
 
-            let returned;
-            if (entrypointArguments) {
-                const requestArguments = entrypointArguments.map(
-                    key => key === "$event" ? requestEvent : requestEvent[key]
-                );
-                returned = fn(...requestArguments);
-            } else {
-                ok<ServiceWorkerFetchFn>(fn, fnError);
-                returned = fn(request, requestEvent);
-            }
-            if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
-                waitUntil(returned);
-                returned = await returned;
-            }
-            if (returned instanceof Response) {
-                respondWith(returned);
+            async function dispatch(requestEvent: DurableEventData) {
+                ok(typeof fn === "function", fnError);
+                let returned;
+                if (entrypointArguments) {
+                    const requestArguments = entrypointArguments.map(
+                        key => key === "$event" ? requestEvent : requestEvent[key]
+                    );
+                    returned = fn(...requestArguments);
+                } else {
+                    ok<ServiceWorkerFetchFn>(fn, fnError);
+                    returned = fn(request, requestEvent);
+                }
+                if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
+                    waitUntil(returned);
+                    returned = await returned;
+                }
+                if (returned instanceof Response) {
+                    respondWith(returned);
+                }
             }
         }
 
         const serviceWorker = getServiceWorkerModuleExports();
         if (event.entrypoint) {
             const entrypoint = serviceWorker[event.entrypoint];
-            if (!entrypoint) {
-                const names = Object.keys(serviceWorker);
-                throw new Error(`Unknown entrypoint ${event.entrypoint}, expected one of ${names.join(", ")}`);
+            if (entrypoint) {
+                await dispatchServiceWorkerFnRequest(entrypoint);
+            } else {
+                await dispatch(requestEvent);
             }
-            await dispatchServiceWorkerFnRequest(entrypoint);
         } else if (typeof serviceWorker.fetch === "function") {
             await dispatchServiceWorkerFnRequest(serviceWorker.fetch);
         } else if (typeof serviceWorker.default === "function") {
