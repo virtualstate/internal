@@ -1,4 +1,4 @@
-import {Config, Socket, Service, ServiceEntrypointOption} from "./types";
+import {Config, Socket, Service, ServiceEntrypointOption, NamedService, SocketType} from "./types";
 import {isLike, ok} from "../../../is";
 import {SERVICE_WORKER_LISTEN_HOSTNAME} from "../../../config";
 import {DurableServiceWorkerRegistration, serviceWorker} from "../container";
@@ -17,9 +17,162 @@ import {getURLSource} from "../url";
 import {getOrigin} from "../../../listen";
 import {isRouteMatchCondition} from "../router";
 import {ServiceWorkerWorkerData} from "../worker";
+import {readFile} from "fs/promises";
+import type { SyntaxNode } from "tree-sitter";
+
+async function getURL(url: URL) {
+    if (url.protocol === "file:") {
+        return await readFile(url.pathname, "utf-8");
+    }
+    const response = await fetch(url);
+    ok(response.ok, "Could not fetch config")
+    return response.text();
+}
+
+async function parseCapnp(url: URL) {
+    const source = await getURL(url);
+
+    const { default: Parser } = await import("tree-sitter");
+    const { default: Capnp } = await import("tree-sitter-capnp");
+    const parser = new Parser();
+    parser.setLanguage(Capnp);
+    const tree = parser.parse(source);
+
+    const typed: Record<string, Record<string, SyntaxNode>> = {};
+    const references: Record<string, SyntaxNode> = {};
+
+    for (const constant of tree.rootNode.children.filter(node => node.type === "const")) {
+        const identifier = constant.children.find(({ type }) => type === "const_identifier");
+        const type = constant.children.find(({ type }) => type === "field_type");
+        const value = constant.children.find(({ type }) => type === "const_value");
+        const typeRecord = typed[type.text] || {}
+        typeRecord[identifier.text] = value;
+        references[identifier.text] = value;
+        typed[type.text] = typeRecord;
+    }
+
+    const configs = Object.keys(typed["Workerd.Config"] || {});
+
+    if (configs.length !== 1) {
+        throw new Error(`Expected a single config of type "Workerd.Config", got ${configs.length}: ${configs.join(", ")}`)
+    }
+
+    const [configKey] = configs;
+    const configNode = typed["Workerd.Config"][configKey];
+
+    const config: Config = {
+        url: url.toString(),
+        services: [],
+        sockets: []
+    };
+
+    function parseValue(node: SyntaxNode): unknown {
+        // console.log(node.type, node.text);
+        if (node.type === "struct_shorthand") {
+            return parseRecord(node);
+        } else if (node.type === "const_value") {
+            const [child] = node.children;
+            return parseValue(child);
+        } else if (node.type === "const_list") {
+            return parseArray(node);
+        } else if (node.type === "string") {
+            return JSON.parse(node.text);
+        } else if (node.type === "number" || node.type === "float" || node.type === "integer") {
+            return Number(node.text);
+        } else if (node.type === "boolean") {
+            return Boolean(node.text);
+        } else if (node.type === ".") {
+            return parseReference(node);
+        } else if (node.type === "embedded_file") {
+            return parseURL(node);
+        } else {
+            console.log(node, node.type, node.text, node.typeId);
+            console.warn(`Unknown type ${node.type}`);
+        }
+    }
+
+    function parseURL(node: SyntaxNode) {
+        const [typeNode, valueNode] = node.children;
+        ok(typeNode.type === "embed", "Expected type embed");
+        ok(valueNode, "Expected value node");
+        return parseValue(valueNode);
+    }
+
+    function parseReference(node: SyntaxNode) {
+        const localNode = node.nextSibling;
+        ok(localNode.type === "local_const", "Expected local_const");
+        const name = localNode.text;
+        return parseValue(references[name]);
+    }
+
+    function parseArray(node: SyntaxNode) {
+        return node.children
+            .filter(node => node.type === "const_value")
+            .map(parseValue);
+    }
+
+    function parseRecord(node: SyntaxNode) {
+        const record: Record<string, unknown> = {}
+        for (const property of node.children.filter(node => node.type === "property")) {
+            const value = property.nextSibling.nextSibling;
+            record[property.text] = parseValue(value);
+        }
+        return record;
+    }
+
+    // Sorry any
+    const parsed: any = parseValue(configNode);
+
+    if (Array.isArray(parsed.services)) {
+        for (const service of parsed.services) {
+            const next: NamedService = {
+                name: service.name
+            };
+            if (service.worker) {
+                next.url = service.worker.modules.map(
+                    (module: Record<string, string>) => module.esModule
+                );
+            }
+            config.services.push(next);
+        }
+    }
+    if (Array.isArray(parsed.sockets)) {
+        for (const socket of parsed.sockets) {
+            let next: SocketType = {
+                name: socket.name,
+                service: socket.service,
+                address: socket.address
+            }
+            if (socket.http) {
+                next = {
+                    type: "http",
+                    ...socket.http,
+                    ...next
+                };
+            } else if (socket.https) {
+                next = {
+                    type: "https",
+                    ...socket.https.options,
+                    ...socket.https,
+                    ...next
+                }
+            }
+            config.sockets.push(next);
+        }
+    }
+
+    return config
+}
+
+async function importCapnpConfigModule(url: URL) {
+    return parseCapnp(url);
+}
 
 async function importConfigModule(url: string | URL) {
     const instance = url instanceof URL ? url : new URL(url, "file:///");
+    if (instance.pathname.endsWith(".capnp")) {
+        return importCapnpConfigModule(instance);
+    }
     const configModule = await import(url.toString(), {
         assert: instance.pathname.endsWith(".json") ? {
             type: "json"
