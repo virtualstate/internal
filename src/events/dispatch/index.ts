@@ -91,10 +91,20 @@ export async function onDispatchEvent(event: UnknownEvent) {
 
     if (event.entrypoint) {
         const entrypoints = getServiceWorkerModuleExports();
-        if (typeof entrypoints[event.entrypoint] === "function") {
-            await dispatchEntrypointEvent(entrypoints[event.entrypoint])
-        } else if (isLike<{ default: Record<string, unknown> }>(entrypoints) && entrypoints.default && typeof entrypoints.default[event.entrypoint] === "function") {
-            await dispatchEntrypointEvent(entrypoints.default[event.entrypoint])
+        const entrypoint = entrypoints[event.entrypoint]
+        if (typeof entrypoint === "function") {
+            await dispatchEntrypointEvent(entrypoint)
+        } else if (isLike<Record<string, unknown>>(entrypoint) && typeof entrypoint[dispatching.type] === "function") {
+            await dispatchEntrypointEvent(entrypoint[dispatching.type])
+        } else if (isLike<{ default: Record<string, unknown> }>(entrypoints) && entrypoints.default) {
+            const entrypoint = entrypoints.default[event.entrypoint];
+            if (typeof entrypoint === "function") {
+                await dispatchEntrypointEvent(entrypoint)
+            } else if (isLike<Record<string, unknown>>(entrypoint) && typeof entrypoint[dispatching.type] === "function") {
+                await dispatchEntrypointEvent(entrypoint[dispatching.type])
+            } else {
+                await dispatch();
+            }
         } else {
             // If entrypoint isn't available, dispatch as normal event
             await dispatch();
