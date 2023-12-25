@@ -133,6 +133,9 @@ async function parseCapnp(url: URL) {
                     (module: Record<string, string>) => module.esModule
                 );
             }
+
+            // TODO include supported features
+
             config.services.push(next);
         }
     }
