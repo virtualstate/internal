@@ -160,18 +160,42 @@ export function getScheduledFunctions(options: ScheduledFunctionOptions): Schedu
 }
 
 export function getDispatcherFunction(options: ScheduledFunctionOptions): ScheduledOptions<DispatcherFn> | undefined {
-    const config = getConfig();
-    const configMatch = getMatchingDispatcher(
-        filterScheduledFunctions(config.dispatchers, [], options),
-        "config"
-    );
-    if (configMatch) {
-        return configMatch;
+    // TODO explore wildcard dispatcher
+    return getMatch(options);
+
+    // const base = getMatch({ event: { type: "*" } });
+    // const match = getMatch(options);
+    //
+    // if (!base) {
+    //     return match;
+    // }
+    //
+    // if (!match) {
+    //     return base;
+    // }
+    //
+    // return {
+    //     ...base,
+    //     ...match,
+    //     handler(event, dispatch) {
+    //         return base.handler(event, (event) => match.handler(event, dispatch));
+    //     }
+    // }
+
+    function getMatch(options: ScheduledFunctionOptions) {
+        const config = getConfig();
+        const configMatch = getMatchingDispatcher(
+            filterScheduledFunctions(config.dispatchers, [], options),
+            "config"
+        );
+        if (configMatch) {
+            return configMatch;
+        }
+        return getMatchingDispatcher(
+            filterScheduledFunctions([], [...DISPATCHER_FUNCTIONS.values()], options),
+            "internal"
+        );
     }
-    return getMatchingDispatcher(
-        filterScheduledFunctions([], [...DISPATCHER_FUNCTIONS.values()], options),
-        "internal"
-    );
 
     function getMatchingDispatcher(dispatchers: ScheduledOptions<DispatcherFn>[], name: string) {
         if (!dispatchers.length) {
