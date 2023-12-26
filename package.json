@@ -255,7 +255,7 @@
     "watch": "yarn build && concurrently --raw \"yarn start:nodemon\" \"yarn build:watch\" ",
     "prettier:check": "prettier --check .",
     "prettier": "prettier --write .",
-    "vork": "node --no-warnings=DEP0040 ./esnext/worker/service-worker/configure/main.js",
+    "vork": "node --experimental-detect-module --no-warnings=DEP0040 ./esnext/worker/service-worker/configure/main.js",
     "bork": "bun ./esnext/worker/service-worker/configure/main.js"
   },
   "importmap": {

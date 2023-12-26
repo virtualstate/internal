@@ -236,30 +236,23 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
         const entrypointArguments = event.entrypointArguments;
 
         async function dispatchServiceWorkerFnRequest(fn: unknown, fnError = "Expected entrypoint to be a function") {
-            const dispatcher = getDispatcherFunction({
-                event: requestEvent
-            });
-            dispatcher.handler(requestEvent, dispatch);
-
-            async function dispatch(requestEvent: DurableEventData) {
-                ok(typeof fn === "function", fnError);
-                let returned;
-                if (entrypointArguments) {
-                    const requestArguments = entrypointArguments.map(
-                        key => key === "$event" ? requestEvent : requestEvent[key]
-                    );
-                    returned = fn(...requestArguments);
-                } else {
-                    ok<ServiceWorkerFetchFn>(fn, fnError);
-                    returned = fn(request, requestEvent);
-                }
-                if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
-                    waitUntil(returned);
-                    returned = await returned;
-                }
-                if (returned instanceof Response) {
-                    respondWith(returned);
-                }
+            ok(typeof fn === "function", fnError);
+            let returned;
+            if (entrypointArguments) {
+                const requestArguments = entrypointArguments.map(
+                    key => key === "$event" ? requestEvent : requestEvent[key]
+                );
+                returned = fn(...requestArguments);
+            } else {
+                ok<ServiceWorkerFetchFn>(fn, fnError);
+                returned = fn(request, requestEvent);
+            }
+            if (isLike<Promise<unknown>>(returned) && typeof returned === "object" && "then" in returned) {
+                waitUntil(returned);
+                returned = await returned;
+            }
+            if (returned instanceof Response) {
+                respondWith(returned);
             }
         }
 
