@@ -51,28 +51,30 @@ if (configUrl.startsWith("{") && configUrl.endsWith("}")) {
 }
 
 try {
-    const configured = await importConfiguration(configUrl, {
-        noStringifyConfig: argv.includes("--no-stringify-config"),
-        virtual: argv.includes("--virtual"), // Forces NO listeners
-        install: argv.includes("--install")
-    });
 
     const event = getOption("event");
     const service = getOption("service");
     const entrypoint = getOption("entrypoint");
 
+    const configured = await importConfiguration(configUrl, {
+        noStringifyConfig: argv.includes("--no-stringify-config"),
+        virtual: argv.includes("--virtual") || Boolean(event), // Forces NO listeners
+        install: argv.includes("--install")
+    });
+
     if (event) {
         const named = await configured.getService(service);
-        await named.pushable.push({
-            serviceWorkerId: named.registration.durable.serviceWorkerId,
-            event: {
-                type: "dispatch",
-                dispatch: event,
-                entrypoint,
-                virtual: true
-            }
+        const dispatch = await named.activated;
+        await dispatch({
+            type: "dispatch",
+            dispatch: event,
+            entrypoint,
+            virtual: true
         })
-        console.log("Pushed", event);
+        console.log("Dispatched", event);
+        if (!argv.includes("--no-exit")) {
+            process.exit(0);
+        }
     }
 } catch (error) {
     console.error(error);
