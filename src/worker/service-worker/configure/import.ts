@@ -50,15 +50,17 @@ async function parseCapnp(url: URL) {
         references[identifier.text] = value;
         typed[type.text] = typeRecord;
     }
-
-    const configs = Object.keys(typed["Workerd.Config"] || {});
+    const typeKeys = Object.keys(typed);
+    // Any namespace can be used for the config.
+    const configType = typeKeys.find(key => key.endsWith(".Config"));
+    const configs = Object.keys(typed[configType] || {});
 
     if (configs.length !== 1) {
-        throw new Error(`Expected a single config of type "Workerd.Config", got ${configs.length}: ${configs.join(", ")}`)
+        throw new Error(`Expected a single config of type "${configType}", got ${configs.length}: ${configs.join(", ")}`)
     }
 
     const [configKey] = configs;
-    const configNode = typed["Workerd.Config"][configKey];
+    const configNode = typed[configType][configKey];
 
     const config: Config = {
         url: url.toString(),
@@ -124,18 +126,79 @@ async function parseCapnp(url: URL) {
     const parsed: any = parseValue(configNode);
 
     if (Array.isArray(parsed.services)) {
+        const inherit: [string, NamedService][] = [];
+
         for (const service of parsed.services) {
             const next: NamedService = {
                 name: service.name
             };
+            let isInherit = false;
             if (service.worker) {
-                next.url = service.worker.modules.map(
-                    (module: Record<string, string>) => module.esModule
-                );
+                console.log(service.worker)
+                if (Array.isArray(service.worker.modules)) {
+                    next.url = service.worker.modules.map(
+                        (module: Record<string, string>) => {
+                            if (module.esModule) {
+                                return module.esModule;
+                            }
+                            if (module.commonJsModule) {
+                                return module.commonJsModule;
+                            }
+                            if (module.text) {
+                                return `data:text/javascript,${encodeURIComponent(`
+                                export default ${JSON.stringify(module.text)}
+                                `)}`
+                            }
+                            if (module.json) {
+                                return `data:text/javascript,${encodeURIComponent(`
+                                export default ${module.json}
+                                `)}`
+                            }
+                            if (module.nodeJsCompatModule) {
+                                return module.nodeJsCompatModule;
+                            }
+                            if (typeof module.wasm === "string") {
+                                return module.wasm;
+                            }
+                            console.log(module)
+                            throw new Error("Unknown or unimplemented service import type");
+                        }
+                    );
+                } else if (service.worker.serviceWorkerScript) {
+                    next.url = service.worker.serviceWorkerScript;
+                } else if (service.worker.inherit) {
+                    isInherit = true;
+                }
+            } else {
+                throw new Error("Unknown or unimplemented service type");
             }
 
             // TODO include supported features
+            if (isInherit) {
+                inherit.push([service.worker.inherit, next]);
+            } else {
+                config.services.push(next);
+            }
+        }
 
+        for (const [from, service] of inherit) {
+            const other = config.services.find(named => named.name === from);
+            ok(other, `Expected service ${from} to be configured before ${service.name} to inherit from`);
+            const fromBindings = other.bindings ?? [];
+            const serviceBindings = service.bindings ?? [];
+            const fromBindingNames = fromBindings
+                .map(binding => binding.name)
+                .filter(Boolean)
+            const next = {
+                ...inherit,
+                ...service,
+                bindings: [
+                    ...fromBindings,
+                    ...serviceBindings.filter(
+                        binding => !binding.name || fromBindingNames.includes(binding.name)
+                    )
+                ]
+            };
             config.services.push(next);
         }
     }
