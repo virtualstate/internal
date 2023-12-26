@@ -19,6 +19,7 @@ import {isRouteMatchCondition} from "../router";
 import {ServiceWorkerWorkerData} from "../worker";
 import {readFile} from "fs/promises";
 import type { SyntaxNode } from "tree-sitter";
+import {getServiceBindingURL} from "../service-router";
 
 async function getURL(url: URL) {
     if (url.protocol === "file:") {
@@ -136,33 +137,46 @@ async function parseCapnp(url: URL) {
             if (service.worker) {
                 console.log(service.worker)
                 if (Array.isArray(service.worker.modules)) {
-                    next.url = service.worker.modules.map(
-                        (module: Record<string, string>) => {
-                            if (module.esModule) {
-                                return module.esModule;
-                            }
-                            if (module.commonJsModule) {
-                                return module.commonJsModule;
-                            }
-                            if (module.text) {
-                                return `data:text/javascript,${encodeURIComponent(`
+                    next.url = await Promise.all(
+                        service.worker.modules.map(
+                            async (module: Record<string, string>) => {
+                                if (module.esModule) {
+                                    return module.esModule;
+                                }
+                                if (module.commonJsModule) {
+                                    return module.commonJsModule;
+                                }
+                                if (module.text) {
+                                    return `data:text/javascript,${encodeURIComponent(`
                                 export default ${JSON.stringify(module.text)}
                                 `)}`
-                            }
-                            if (module.json) {
-                                return `data:text/javascript,${encodeURIComponent(`
+                                }
+                                if (module.json) {
+                                    return `data:text/javascript,${encodeURIComponent(`
                                 export default ${module.json}
                                 `)}`
+                                }
+                                if (module.nodeJsCompatModule) {
+                                    return module.nodeJsCompatModule;
+                                }
+                                if (typeof module.wasm === "string") {
+                                    return module.wasm;
+                                }
+                                if (module.data) {
+                                    const url = getServiceBindingURL(
+                                        module.data,
+                                        next,
+                                        config
+                                    )
+                                    const data = await getURL(url);
+                                    return `data:text/javascript,${encodeURIComponent(`
+                                export default Buffer.from(${JSON.stringify(data)}, "utf-8")
+                                `)}`
+                                }
+                                console.log(module)
+                                throw new Error("Unknown or unimplemented service import type");
                             }
-                            if (module.nodeJsCompatModule) {
-                                return module.nodeJsCompatModule;
-                            }
-                            if (typeof module.wasm === "string") {
-                                return module.wasm;
-                            }
-                            console.log(module)
-                            throw new Error("Unknown or unimplemented service import type");
-                        }
+                        )
                     );
                 } else if (service.worker.serviceWorkerScript) {
                     next.url = service.worker.serviceWorkerScript;
