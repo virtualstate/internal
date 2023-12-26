@@ -12,6 +12,7 @@ import {index} from "../../content-index";
 import {sync} from "../../sync";
 import {periodicSync} from "../../periodic-sync";
 import {serviceWorker} from "./container";
+import {scheduler} from "../../scheduler";
 import {getOrigin} from "../../listen";
 import {addEventListener, removeEventListener} from "../../events/schedule/schedule";
 import {dispatchEvent} from "../../events";
@@ -65,6 +66,7 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
         sync,
         periodicSync,
         serviceWorker,
+        scheduler,
         self: globalSelf,
         isSecureContext: protocol === "https:",
         origin: origin || getOrigin(),

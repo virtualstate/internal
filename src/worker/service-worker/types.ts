@@ -5,6 +5,7 @@ import {SyncEvent} from "../../sync";
 import {DurableEventData} from "../../data";
 import {PeriodicSyncEvent} from "../../periodic-sync";
 import {ActivateEvent, InstallEvent} from "./dispatchers";
+import {Scheduler} from "../../scheduler/container";
 
 
 
@@ -16,6 +17,7 @@ export interface DurableServiceWorkerScope {
     index: DurableContentIndex,
     serviceWorker: DurableServiceWorkerContainer,
     self: DurableServiceWorkerScope,
+    scheduler: Scheduler,
     isSecureContext: boolean
     origin: string
     addEventListener(type: "fetch", fn: (event: FetchEvent) => void): void;
