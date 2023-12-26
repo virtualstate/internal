@@ -184,7 +184,8 @@ async function parseCapnp(url: URL) {
                     isInherit = true;
                 }
             } else {
-                throw new Error("Unknown or unimplemented service type");
+                console.warn("Unknown or unimplemented service type");
+                console.log(service);
             }
 
             // TODO include supported features
@@ -453,7 +454,7 @@ export async function importConfiguration(source: string | URL | Config, { virtu
             }
             closeFns = [];
         }
-    };
+    } as const;
 }
 
 function createSocketFetch(config: Config, getService: ServiceFn): FetchFn {

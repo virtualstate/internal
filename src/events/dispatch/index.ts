@@ -60,7 +60,11 @@ export async function onDispatchEvent(event: UnknownEvent) {
         const dispatcher = getDispatcherFunction({
             event: dispatching
         });
-        dispatcher.handler(dispatching, dispatch);
+        if (dispatcher) {
+            return dispatcher.handler(dispatching, dispatch);
+        } else {
+            return dispatch(dispatching);
+        }
 
         function dispatch(dispatching: DurableEventData) {
             ok(typeof entrypoint === "function", "Expected entrypoint to be a function");

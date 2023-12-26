@@ -51,12 +51,38 @@ if (configUrl.startsWith("{") && configUrl.endsWith("}")) {
 }
 
 try {
-    await importConfiguration(configUrl, {
+    const configured = await importConfiguration(configUrl, {
         noStringifyConfig: argv.includes("--no-stringify-config"),
         virtual: argv.includes("--virtual"), // Forces NO listeners
         install: argv.includes("--install")
     });
+
+    const event = getOption("event");
+    const service = getOption("service");
+    const entrypoint = getOption("entrypoint");
+
+    if (event) {
+        const named = await configured.getService(service);
+        await named.pushable.push({
+            serviceWorkerId: named.registration.durable.serviceWorkerId,
+            event: {
+                type: "dispatch",
+                dispatch: event,
+                entrypoint,
+                virtual: true
+            }
+        })
+        console.log("Pushed", event);
+    }
 } catch (error) {
     console.error(error);
     process.exit(1);
+}
+
+function getOption(name: string) {
+    const key = `--${name}`;
+    const index = argv.indexOf(key);
+    if (index === -1) return undefined;
+    const next = index + 1;
+    return argv[next];
 }
