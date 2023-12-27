@@ -29,6 +29,7 @@ export interface WorkerBinding extends WorkerBindingTypeOptions, ImportCallOptio
 
 export interface WorkerOptions {
     bindings?: WorkerBinding[];
+    globalOutbound?: string
 }
 
 export interface ScriptWorker {

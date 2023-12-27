@@ -110,7 +110,8 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
         const binding = router(input, init);
 
         if (!binding) {
-            const internetBinding = binding || { name: "internet", service: "internet" }
+            const globalOutbound = service.globalOutbound || "internet";
+            const internetBinding = binding || { name: globalOutbound, service: globalOutbound }
             const internet = getBindingNamedService(internetBinding, internetBinding);
             // If we get back the binding we passed, then the service didn't exist
             // If the internet service does not exist, we will use global
