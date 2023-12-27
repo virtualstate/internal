@@ -88,6 +88,13 @@ async function parseCapnp(url: URL) {
             return parseReference(node);
         } else if (node.type === "embedded_file") {
             return parseURL(node);
+        } else if (node.type === "const_identifier") {
+            const referenced = references[node.text];
+            if (referenced) {
+                return parseValue(referenced);
+            } else {
+                return node.text;
+            }
         } else {
             console.log(node, node.type, node.text, node.typeId);
             console.warn(`Unknown type ${node.type}`);
@@ -188,6 +195,29 @@ async function parseCapnp(url: URL) {
                 next.source = {
                     type: "network"
                 };
+            } else if (service.external) {
+                const { address, http, https } = service.external;
+                const url = new URL(`${http ? "http" : "https"}://${address}`).toString();
+                next.url = `data:text/javascript,${encodeURIComponent(`
+                const { origin } = new URL(${JSON.stringify(url)});
+                export default {
+                  async fetch(request) {
+                    const url = new URL(request.url);
+                    const forwardedProto = url.protocol.replace(/:$/, "");
+                    const forwardedHost = url.host;
+                    url.origin = origin;
+                    const cloned = request.clone()
+                    const headers = new Headers(cloned.headers);
+                    headers.set("X-Forwarded-Proto", headers.get("X-Forwarded-Proto") || forwardedProto);
+                    headers.set("X-Forwarded-Host", headers.get("X-Forwarded-Host") || forwardedHost);
+                    return fetch(new Request(url, {
+                        method: request.method,
+                        body: cloned.body,
+                        headers
+                    }));
+                  }
+                }
+                `)}`
             } else {
                 console.warn("Unknown or unimplemented service type");
                 console.log(service);
