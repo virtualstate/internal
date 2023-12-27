@@ -183,6 +183,11 @@ async function parseCapnp(url: URL) {
                 } else if (service.worker.inherit) {
                     isInherit = true;
                 }
+            } else if (service.network) {
+                // TODO disallow/allow network based on given rules
+                next.source = {
+                    type: "network"
+                };
             } else {
                 console.warn("Unknown or unimplemented service type");
                 console.log(service);

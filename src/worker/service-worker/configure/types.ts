@@ -1,4 +1,4 @@
-import {AddRoutesOptions} from "../router";
+import {AddRoutesOptions, RouterRuleSource, RouterSource} from "../router";
 import {DurableServiceWorkerScope} from "../types";
 
 export interface WorkerParameter {
@@ -36,7 +36,11 @@ export interface ScriptWorker {
     url?: ImportableURL | ImportableURL[];
 }
 
-export interface Service extends ScriptWorker, WorkerOptions {
+export interface SourceWorker {
+    source?: RouterRuleSource;
+}
+
+export interface Service extends ScriptWorker, SourceWorker, WorkerOptions {
     name?: string;
 }
 
@@ -101,7 +105,7 @@ const example: Config = {
         {
           // Name only, would be mapped as `url: "./named.js"` automatically
           // is used with an entrypoint later
-          name: "named",
+          name: "named"
         },
         {
             name: "example",

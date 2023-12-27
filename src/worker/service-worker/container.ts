@@ -10,6 +10,8 @@ import {getInternalStorageBucket, InternalBucket} from "../../storage-buckets/in
 import {getOrigin} from "../../listen";
 import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 import {SERVICE_WORKER_ID, SERVICE_WORKER_URL} from "../../config";
+import {ServiceWorkerWorkerData} from "./worker";
+import {Pushable} from "./execute";
 
 export type DurableServiceWorkerRegistrationState = "pending" | "installing" | "installed" | "activating" | "activated";
 
@@ -121,9 +123,11 @@ export class DurableServiceWorker {
 
 }
 
-export interface DurableServiceWorkerRegistrationOptions {
+export interface DurableServiceWorkerRegistrationOptions extends RegistrationOptions {
     isCurrentGlobalScope?: boolean
     internalBucket?: InternalBucket;
+    serviceWorkerInit?: Partial<ServiceWorkerWorkerData>
+    pushable?: Pushable<ServiceWorkerWorkerData, unknown>
 }
 
 const DURABLE_SERVICE_WORKER_REGISTRATION_UPDATE = "serviceWorker:registration:update" as const;
@@ -260,7 +264,7 @@ export class DurableServiceWorkerContainer {
         this.internalBucket = internalBucket;
     }
 
-    async register(url: string, options?: RegistrationOptions) {
+    async register(url: string, options?: DurableServiceWorkerRegistrationOptions) {
         const instance = new URL(url, getServiceWorkerUrl());
         ok(instance.protocol === "file:" || instance.protocol === "data:", "Only file and data service workers supported at this time");
         const store = getServiceWorkerRegistrationStore(this.internalBucket);
@@ -268,7 +272,7 @@ export class DurableServiceWorkerContainer {
         const serviceWorkerId = envId ?? getServiceWorkerId(instance.toString());
         const existing = await store.get(serviceWorkerId);
         if (existing) {
-            const instance = new DurableServiceWorkerRegistration(existing);
+            const instance = new DurableServiceWorkerRegistration(existing, options);
             if (existing.registrationState === "activating") {
                 // TODO
             }
@@ -300,7 +304,7 @@ export class DurableServiceWorkerContainer {
             options
         };
         await store.set(serviceWorkerId, registration);
-        return new DurableServiceWorkerRegistration(registration);
+        return new DurableServiceWorkerRegistration(registration, options);
     }
 
     async getRegistration(clientUrl?: string) {
