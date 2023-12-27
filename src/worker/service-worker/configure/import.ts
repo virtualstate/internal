@@ -1,4 +1,4 @@
-import {Config, Socket, Service, ServiceEntrypointOption, NamedService, SocketType} from "./types";
+import {Config, Socket, Service, ServiceEntrypointOption, NamedService, SocketType, WorkerBinding} from "./types";
 import {isLike, ok} from "../../../is";
 import {SERVICE_WORKER_LISTEN_HOSTNAME} from "../../../config";
 import {DurableServiceWorkerRegistration, serviceWorker} from "../container";
@@ -134,6 +134,17 @@ async function parseCapnp(url: URL) {
     // Sorry any
     const parsed: any = parseValue(configNode);
 
+    function parseBindings(bindings: any[]): WorkerBinding[] {
+        return bindings.map(binding => {
+            const next: WorkerBinding = {
+                ...binding,
+                name: binding.name
+            }
+            console.log(next);
+            return next;
+        })
+    }
+
     if (Array.isArray(parsed.services)) {
         const inherit: [string, NamedService][] = [];
 
@@ -192,6 +203,9 @@ async function parseCapnp(url: URL) {
                     next.url = service.worker.serviceWorkerScript;
                 } else if (service.worker.inherit) {
                     isInherit = true;
+                }
+                if (Array.isArray(service.worker.bindings)) {
+                    next.bindings.push(...parseBindings(service.worker.bindings));
                 }
             } else if (service.network) {
                 // TODO disallow/allow network based on given rules
@@ -279,7 +293,9 @@ async function parseCapnp(url: URL) {
             config.sockets.push(next);
         }
     }
-
+    if (Array.isArray(parsed.bindings)) {
+        config.bindings.push(...parseBindings(parsed.bindings));
+    }
     return config
 }
 

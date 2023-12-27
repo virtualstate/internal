@@ -27,8 +27,12 @@ export class Scheduler {
         return callback();
     }
 
-    async wait(delay: number) {
-        return new Promise<void>(resolve => setTimeout(resolve, delay));
+    async wait(delay: number | string) {
+        if (typeof delay === "string") {
+            // TODO wait for event
+        } else {
+            return new Promise<void>(resolve => setTimeout(resolve, delay));
+        }
     }
 
 }
