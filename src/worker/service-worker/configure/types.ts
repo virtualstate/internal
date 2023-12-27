@@ -99,6 +99,7 @@ export interface Config {
     extensions?: ExtensionType[];
     // Install all or specific named services
     install?: boolean | string | string[];
+    bindings?: WorkerBinding[];
 }
 
 const example: Config = {

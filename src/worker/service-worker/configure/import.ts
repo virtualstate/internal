@@ -66,7 +66,8 @@ async function parseCapnp(url: URL) {
     const config: Config = {
         url: url.toString(),
         services: [],
-        sockets: []
+        sockets: [],
+        bindings: [],
     };
 
     function parseValue(node: SyntaxNode): unknown {
@@ -138,7 +139,9 @@ async function parseCapnp(url: URL) {
 
         for (const service of parsed.services) {
             const next: NamedService = {
-                name: service.name
+                ...service,
+                name: service.name,
+                bindings: [],
             };
             let isInherit = false;
             if (service.worker) {

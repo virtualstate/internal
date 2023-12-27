@@ -16,7 +16,7 @@ const serviceWorkerContainer = serviceWorker;
 export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, serviceWorker: DurableServiceWorkerRegistration): typeof fetch {
     const { config, service, context } = data;
 
-    if (!(config && service?.bindings)) {
+    if (!(config?.bindings?.length || service?.bindings?.length)) {
         return globalFetch;
     }
 

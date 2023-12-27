@@ -22,12 +22,14 @@ export function getServiceBindingURL(input: ImportableURL | RequestInfo, service
 
 export function createServiceBindingRouter({ config, service }: ServiceWorkerWorkerData, serviceWorker: DurableServiceWorkerRegistration) {
 
+    const configProtocolBindings = config.bindings?.filter(binding => binding.protocol);
+    const configNonProtocolBindings = config.bindings?.filter(binding => !binding.protocol);
     const protocolBindings = service.bindings?.filter(binding => binding.protocol);
     const nonProtocolBindings = service.bindings?.filter(binding => !binding.protocol);
 
     return (input: RequestInfo | URL, init?: RequestInit): WorkerBinding | undefined => {
 
-        if (!service.bindings?.length) {
+        if (!(service.bindings?.length || config.bindings?.length)) {
             return undefined;
         }
 
@@ -36,10 +38,13 @@ export function createServiceBindingRouter({ config, service }: ServiceWorkerWor
 
             return (
                 match(protocolBindings) ||
-                match(nonProtocolBindings)
+                match(configProtocolBindings) ||
+                match(nonProtocolBindings) ||
+                match(configNonProtocolBindings)
             );
 
-            function match(bindings: WorkerBinding[]) {
+            function match(bindings?: WorkerBinding[]) {
+                if (!bindings) return undefined;
                 for (const binding of bindings) {
                     if (isServiceMatchCondition(serviceWorker, config, service, binding, url, input, init)) {
                         return binding;
