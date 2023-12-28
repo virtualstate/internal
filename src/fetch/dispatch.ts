@@ -267,6 +267,15 @@ export const removeFetchDispatcherFunction = dispatcher("fetch", async (event, d
                 } else {
                     await dispatch(requestEvent);
                 }
+            } else if (isLike<Record<string, unknown>>(serviceWorker.default)) {
+                const entrypoint = serviceWorker.default[event.entrypoint];
+                if (typeof entrypoint === "function") {
+                    await dispatchServiceWorkerFnRequest(entrypoint);
+                } else if (isLike<Record<string, unknown>>(entrypoint) && typeof entrypoint[requestEvent.type] === "function") {
+                    await dispatchServiceWorkerFnRequest(entrypoint[requestEvent.type]);
+                } else {
+                    await dispatch(requestEvent);
+                }
             } else {
                 await dispatch(requestEvent);
             }

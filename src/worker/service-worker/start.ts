@@ -97,7 +97,7 @@ export async function listen({ id: serviceWorkerId, listen: { port, hostname, or
             }
             const eventPromise = dispatch({
                 type: "fetch",
-                request: new Request(new URL(incomingMessage.url, origin || "file://"), init),
+                request: new Request(new URL(incomingMessage.url, origin || `http://${hostname}:${port}`), init),
                 respondWith,
                 handled,
                 serviceWorkerId,

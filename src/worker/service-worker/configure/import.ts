@@ -20,6 +20,8 @@ import {ServiceWorkerWorkerData} from "../worker";
 import {readFile} from "fs/promises";
 import type { SyntaxNode } from "tree-sitter";
 import {getServiceBindingURL} from "../service-router";
+import {fileURLToPath} from "node:url";
+import {dirname} from "path";
 
 async function getURL(url: URL) {
     if (url.protocol === "file:") {
@@ -134,13 +136,31 @@ async function parseCapnp(url: URL) {
     // Sorry any
     const parsed: any = parseValue(configNode);
 
+    const directory = dirname(url.pathname);
+
     function parseBindings(bindings: any[]): WorkerBinding[] {
         return bindings.map(binding => {
             const next: WorkerBinding = {
                 ...binding,
                 name: binding.name
             }
-            console.log(next);
+            if (typeof next.service === "string") {
+                next.service = {
+                    name: next.service
+                }
+            }
+            if (next.service) {
+                if (!next.service.entrypoint) {
+                    next.service.entrypoint = "fetch"
+                }
+                if (!next.service.entrypointArguments) {
+                    next.service.entrypointArguments = [
+                        "request",
+                        "bindings",
+                        "$event"
+                    ]
+                }
+            }
             return next;
         })
     }
@@ -194,7 +214,6 @@ async function parseCapnp(url: URL) {
                                 export default Buffer.from(${JSON.stringify(data)}, "utf-8")
                                 `)}`
                                 }
-                                console.log(module)
                                 throw new Error("Unknown or unimplemented service import type");
                             }
                         )
@@ -235,15 +254,80 @@ async function parseCapnp(url: URL) {
                   }
                 }
                 `)}`
+            } else if (service.disk) {
+                next.url = `data:text/javascript,${encodeURIComponent(`
+                import { createWriteStream, createReadStream } from "node:fs";
+                import { stat, readdir } from "node:fs/promises";
+                import { Readable } from "node:stream";
+                import { ReadableStream } from "node:stream/web";
+                import { finished } from "node:stream/promises";
+                import process from "node:process";
+                import { join } from "node:path";
+                const cwd = join(${JSON.stringify(directory)}, ${JSON.stringify(service.disk)});
+                export default {
+                  async fetch(request) {
+                    const method = request.method.toLowerCase();
+                    const { pathname } = new URL(request.url);
+                    if (pathname.includes("..")) throw new Error("Unexpected double dot used in pathname");
+                    const path = join(cwd, "." + pathname);
+                    console.log({ path, method });
+                    if (method === "put") {
+                        const fileStream = createWriteStream(path, { flags: "wx" });
+                        await finished(Readable.fromWeb(res.body).pipe(fileStream));
+                        return new Response(null, { status: 204 });
+                    }
+                    let pathStat;
+                    try {
+                      pathStat = await stat(path);
+                      if (!pathStat.isFile()) {
+                         if (pathStat.isDirectory()) {
+                           const directory = await readdir(path)
+                           return Response.json(directory);
+                         }
+                         return new Response(null, { status: 404 });
+                      }
+                    } catch {
+                      return new Response(null, { status: 404 });
+                    }
+                    const headers = {
+                        "Last-Modified": pathStat.mtime.toUTCString()
+                    }
+                    if (method === "head") {
+                        return new Response(null, { headers });
+                    }
+                    try { 
+                      const fileStream = createReadStream(path);
+                      return new Response(ReadableStream.from(fileStream), { headers });
+                    } catch (error) {
+                      console.log(error);
+                      return new Response(String(error), { status: 500 });
+                    }
+                  }
+                }
+                
+                `)}`
             } else {
                 console.warn("Unknown or unimplemented service type");
                 console.log(service);
             }
 
+
+
             // TODO include supported features
             if (isInherit) {
                 inherit.push([service.worker.inherit, next]);
             } else {
+                if (!next.entrypoint) {
+                    next.entrypoint = "fetch";
+                }
+                if (!next.entrypointArguments) {
+                    next.entrypointArguments = [
+                        "request",
+                        "bindings",
+                        "$event"
+                    ];
+                }
+
                 config.services.push(next);
             }
         }
@@ -576,15 +660,7 @@ async function initialiseSocket(config: Config, socket: Socket, getService: Serv
         ok(typeof respondWith === "function");
         ok(request instanceof Request);
 
-        respondWith(executeServiceWorkerFetchEvent(service.registration, {
-            ...rest,
-            type: "fetch",
-            request: fromRequestWithSourceBody(request),
-            virtual: true
-        }, {
-            config,
-            service: service.service
-        }))
+        respondWith(service.fetch(request))
 
         // ok(typeof respondWith === "function");
         // ok(request instanceof Request);

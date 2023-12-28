@@ -2,7 +2,7 @@ import type {DurableServiceWorkerRegistration} from "./container";
 import { globalFetch } from "./global-fetch";
 import {ServiceWorkerWorkerData} from "./worker";
 import {createServiceBindingRouter, getServiceBindingURL} from "./service-router";
-import type {WorkerBinding, ServiceEntrypoint, Service, Config} from "./configure";
+import type {WorkerBinding, Service, Config} from "./configure";
 import {serviceWorker} from "./container";
 import {createServiceWorkerFetch, FetchFn} from "./execute-fetch";
 import {getImportUrlSourceForService} from "./worker-service-url";
@@ -23,7 +23,7 @@ export function getBindingServiceEntrypoint(config: Config, binding: WorkerBindi
     if (!serviceName) {
         throw new Error("Expected binding to have service name")
     }
-    let serviceEntrypoint: ServiceEntrypoint;
+    let serviceEntrypoint: Service;
     if (typeof serviceName === "string") {
         serviceEntrypoint = config.services?.find(service => service.name === serviceName)
     } else {
@@ -54,8 +54,12 @@ export function bindingRegistration(config: Config, binding: WorkerBinding, name
     return promise;
 
     async function get() {
-        const url = getImportUrlSourceForService(namedService || getBindingNamedService(config, binding), config);
-        return await serviceWorkerContainer.register(url);
+        const service = namedService || getBindingNamedService(config, binding);
+        const url = getImportUrlSourceForService(service, config);
+        return await serviceWorkerContainer.register(url, {
+            config,
+            service
+        });
     }
 }
 
@@ -63,13 +67,14 @@ export async function createBindingFetch(config: Config, binding: WorkerBinding,
     const namedService = getBindingNamedService(config, binding);
     const registration = await bindingRegistration(config, binding, namedService);
     if (namedService.source) {
+        const source = namedService.source;
         const fn: FetchFn = async (input, init) => fetchServiceWorkerSource({
             input,
             init,
             registration,
             route: {
                 condition: undefined,
-                source: namedService.source
+                source
             }
         });
         return fn;

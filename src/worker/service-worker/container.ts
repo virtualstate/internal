@@ -123,7 +123,7 @@ export class DurableServiceWorker {
 
 }
 
-export interface DurableServiceWorkerRegistrationOptions extends RegistrationOptions {
+export interface DurableServiceWorkerRegistrationOptions extends RegistrationOptions, Partial<ServiceWorkerWorkerData> {
     isCurrentGlobalScope?: boolean
     internalBucket?: InternalBucket;
     serviceWorkerInit?: Partial<ServiceWorkerWorkerData>
@@ -173,7 +173,8 @@ export class DurableServiceWorkerRegistration {
     private unregisterListener;
     private readonly internalBucket: InternalBucket;
 
-    constructor(data: DurableServiceWorkerRegistrationData, { isCurrentGlobalScope, internalBucket = getInternalStorageBucket() }: DurableServiceWorkerRegistrationOptions = {}) {
+    constructor(data: DurableServiceWorkerRegistrationData, options: DurableServiceWorkerRegistrationOptions = {}) {
+        const { isCurrentGlobalScope, internalBucket = getInternalStorageBucket() } = options;
         this.isCurrentGlobalScope = !!isCurrentGlobalScope;
         this.#onDurableData(data);
         if (this.isCurrentGlobalScope) {
@@ -182,7 +183,7 @@ export class DurableServiceWorkerRegistration {
         this.internalBucket = internalBucket;
         this.sync = new DurableSyncManager();
         this.periodicSync = new DurablePeriodicSyncManager();
-        this.fetch = createServiceWorkerFetch(this);
+        this.fetch = createServiceWorkerFetch(this, options, options.pushable);
     }
 
     #onDurableDataEvent = (event: DurableEvent) => {

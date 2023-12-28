@@ -66,8 +66,8 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
             request,
         virtual: true,
         dispatch: options?.dispatch,
-        entrypoint: options?.entrypoint,
-        entrypointArguments: options?.entrypointArguments
+        entrypoint: options?.entrypoint || serviceWorkerInit?.service?.entrypoint,
+        entrypointArguments: options?.entrypointArguments || serviceWorkerInit?.service?.entrypointArguments
     }, serviceWorkerInit);
 }
 

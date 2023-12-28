@@ -44,9 +44,6 @@ export interface SourceWorker {
 
 export interface Service extends ScriptWorker, SourceWorker, WorkerOptions {
     name?: string;
-}
-
-export interface ServiceEntrypoint extends Service {
     entrypoint?: string;
     entrypointArguments?: string[];
 }
@@ -57,7 +54,7 @@ export interface NamedService extends Service {
 
 export type ServiceEntrypointOption =
     | string
-    | ServiceEntrypoint;
+    | Service;
 
 export interface Socket {
     address: string;
