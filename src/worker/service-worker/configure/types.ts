@@ -15,6 +15,7 @@ export interface WorkerBindingSourceOptions {
     import?: ImportableURL;
     service?: ServiceEntrypointOption;
     queue?: ServiceEntrypointOption;
+    fromEnvironment?: string;
 }
 
 export interface WorkerBindingTypeOptions extends WorkerBindingSourceOptions {

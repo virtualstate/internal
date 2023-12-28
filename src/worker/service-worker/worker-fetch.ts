@@ -180,6 +180,10 @@ export function createServiceWorkerWorkerFetch(data: ServiceWorkerWorkerData, se
             return new Response(null, { status: 204 });
         }
 
+        if (binding.fromEnvironment) {
+            return new Response(process.env[binding.fromEnvironment]);
+        }
+
         if (binding.name) {
             // Name only binding
             return bindingFetch(config, binding, context, input, init);

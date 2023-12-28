@@ -9,6 +9,7 @@ import {dispatchEvent} from "../../events";
 import {ok} from "../../is";
 import {dispatchScheduledDurableEvents} from "../../events/schedule/dispatch-scheduled";
 import {listTransferable} from "./transferrable";
+import {createMaybeServiceWorkerBindingsProxy} from "./worker-bindings-proxy";
 
 export interface FetchResponseMessage {
     type: "fetch:response";
@@ -46,6 +47,7 @@ export async function dispatchWorkerFetchEvent(event: DurableFetchEventData, con
     ok(promise);
 
     const dispatch = {
+        bindings: event.bindings ?? createMaybeServiceWorkerBindingsProxy(context),
         ...event,
         handled,
         respondWith

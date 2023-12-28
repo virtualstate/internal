@@ -27,6 +27,7 @@ import { createServiceWorkerWorkerFetch } from "./worker-fetch";
 import {importWorkerExtensions} from "./worker-extensions";
 import {DurableServiceWorkerScope} from "./types";
 import {ok} from "../../is";
+import {createMaybeServiceWorkerBindingsProxy, ServiceWorkerBindingsProxy} from "./worker-bindings-proxy";
 
 declare var _ORIGINAL_GLOBAL_FETCH: typeof fetch;
 
@@ -56,6 +57,8 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     ok<DurableServiceWorkerScope["removeEventListener"]>(removeEventListener);
     const globalSelf: unknown = globalThis;
     ok<DurableServiceWorkerScope>(globalSelf);
+
+    const bindings = createMaybeServiceWorkerBindingsProxy(data);
 
     const scope: DurableServiceWorkerScope & Record<string, unknown> = {
         _ORIGINAL_GLOBAL_FETCH: globalFetch,
@@ -94,7 +97,10 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
             await setRegistrationStatus( "installing");
             await dispatchEvent({
                 type: "dispatch",
-                dispatch: "install",
+                dispatch: {
+                    type: "install",
+                    bindings
+                },
                 entrypoint: "install",
                 virtual: true
             });
@@ -110,7 +116,10 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
             await setRegistrationStatus( "activating");
             await dispatchEvent({
                 type: "dispatch",
-                dispatch: "activate",
+                dispatch: {
+                    type: "activate",
+                    bindings
+                },
                 entrypoint: "activate",
                 virtual: true
             });
@@ -123,7 +132,10 @@ export async function onServiceWorkerWorkerData(data: ServiceWorkerWorkerData, i
     if (registration.durable.registrationState === "activated") {
         await dispatchEvent({
             type: "dispatch",
-            dispatch: "activated",
+            dispatch: {
+                type: "activated",
+                bindings
+            },
             entrypoint: "activated",
             virtual: true
         });
