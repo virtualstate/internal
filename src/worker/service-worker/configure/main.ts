@@ -4,6 +4,7 @@ import {importConfiguration} from "./import";
 import {join} from "node:path";
 import { Config } from "./types";
 import {ok} from "../../../is";
+import {DurableEventData} from "../../../data";
 
 function isURL(value: string) {
     try {
@@ -55,6 +56,9 @@ try {
     const event = getOption("event");
     const service = getOption("service");
     const entrypoint = getOption("entrypoint");
+    const request = getOption("request");
+    const method = getOption("method");
+    const body = getOption("body");
 
     const configured = await importConfiguration(configUrl, {
         noStringifyConfig: argv.includes("--no-stringify-config"),
@@ -65,9 +69,19 @@ try {
     if (event) {
         const named = await configured.getService(service);
         const dispatch = await named.activated;
+        const dispatching: DurableEventData = {
+            type: event
+        }
+        if (event === "fetch" && request) {
+            dispatching.request = {
+                url: event,
+                method,
+                body
+            };
+        }
         await dispatch({
             type: "dispatch",
-            dispatch: event,
+            dispatch: dispatching,
             entrypoint,
             virtual: true
         })
