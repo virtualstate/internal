@@ -74,7 +74,7 @@ try {
         }
         if (event === "fetch" && request) {
             dispatching.request = {
-                url: event,
+                url: request,
                 method,
                 body
             };
