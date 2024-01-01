@@ -57,8 +57,6 @@ try {
     const service = getOption("service");
     const entrypoint = getOption("entrypoint");
     const request = getOption("request");
-    const method = getOption("method");
-    const body = getOption("body");
 
     const configured = await importConfiguration(configUrl, {
         noStringifyConfig: argv.includes("--no-stringify-config"),
@@ -73,6 +71,8 @@ try {
             type: event
         }
         if (event === "fetch" && request) {
+            const method = getOption("method") ?? "get";
+            const body = getOption("body");
             dispatching.request = {
                 url: request,
                 method,
