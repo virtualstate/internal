@@ -441,6 +441,12 @@ async function initialiseServices(config: Config) {
 
     function parseOptions(options?: ServiceEntrypointOption) {
         if (!options) {
+            if (config.services?.length === 1) {
+                return config.services[0];
+            }
+            if (config.sockets?.length === 1) {
+                return parseOptions(config.sockets[0].service);
+            }
             return {
                 name: "DEFAULT_SERVICE_WORKER__"
             }

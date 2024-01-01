@@ -5,6 +5,7 @@ import {join} from "node:path";
 import { Config } from "./types";
 import {ok} from "../../../is";
 import {DurableEventData} from "../../../data";
+import {FetchInit} from "../execute-fetch";
 
 function isURL(value: string) {
     try {
@@ -66,26 +67,28 @@ try {
 
     if (event) {
         const named = await configured.getService(service);
-        const dispatch = await named.activated;
-        const dispatching: DurableEventData = {
-            type: event
-        }
         if (event === "fetch" && request) {
             const method = getOption("method") ?? "get";
             const body = getOption("body");
-            dispatching.request = {
-                url: request,
+            const response = await named.fetch(request, {
                 method,
                 body
-            };
+            });
+            console.log(await response.text());
+            ok(response.ok, `Expected response ok, got status ${response.status}`);
+        } else {
+            const dispatching: DurableEventData = {
+                type: event
+            }
+            const dispatch = await named.activated;
+            await dispatch({
+                type: "dispatch",
+                dispatch: dispatching,
+                entrypoint,
+                virtual: true
+            });
+            console.log("Dispatched", event);
         }
-        await dispatch({
-            type: "dispatch",
-            dispatch: dispatching,
-            entrypoint,
-            virtual: true
-        })
-        console.log("Dispatched", event);
         if (!argv.includes("--no-exit")) {
             process.exit(0);
         }
