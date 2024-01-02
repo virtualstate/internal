@@ -50,6 +50,17 @@ if (configUrl.startsWith("{") && configUrl.endsWith("}")) {
     configUrl = config;
 } else if (!configUrl.startsWith("/") && !isURL(configUrl)) {
     configUrl = join(process.cwd(), configUrl);
+    if (argv.includes("--worker")) {
+        configUrl = {
+            services: [
+                {
+                    name: "main",
+                    url: configUrl
+                }
+            ],
+            url: new URL(configUrl, `file://${process.cwd()}`).toString()
+        };
+    }
 }
 
 try {

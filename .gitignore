@@ -16,3 +16,6 @@ workerd-tests.capnp
 kv.db
 kv.db-shm
 kv.db-wal
+db.db
+db.db-shm
+db.db-wal
