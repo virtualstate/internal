@@ -65,3 +65,17 @@ jobs:
         run: yarn test:bun
         env:
           PORT: 3401
+      - name: test:node with KV_CONNECT_URL
+        run: yarn test:node
+        env:
+          REDIS_URL: ""
+          REDIS_HOST: ""
+          REDIS_PORT: ""
+          KV_CONNECT_URL: "node-tests.db"
+      - name: test:bun with KV_CONNECT_URL
+        run: yarn test:bun
+        env:
+          REDIS_URL: ""
+          REDIS_HOST: ""
+          REDIS_PORT: ""
+          KV_CONNECT_URL: "bun-tests.db"

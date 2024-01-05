@@ -19,8 +19,12 @@ export function getGlobalKVConnectClient(): Promise<Kv> {
 
     async function getClient(): Promise<Kv> {
         const { openKv } = await import("@deno/kv");
-        const client = openKv(KV_CONNECT_URL, {
-            accessToken: KV_CONNECT_ACCESS_TOKEN
+        const { serialize: encodeV8, deserialize: decodeV8 } = await import("node:v8");
+
+        const client = await openKv(KV_CONNECT_URL, {
+            accessToken: KV_CONNECT_ACCESS_TOKEN,
+            encodeV8,
+            decodeV8
         })
         // client.on("error", console.warn);
         GLOBAL_CLIENTS.set(url, client);
