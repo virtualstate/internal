@@ -45,7 +45,7 @@ function addRequestMethodRouteAndHandler(
     urlPattern: string | URLPatternInit,
     onRequest: OnRequestFn
 ) {
-    const tag = `${requestMethod}:${JSON.stringify(urlPattern)}`;
+    const id = `${requestMethod}:${JSON.stringify(urlPattern)}`;
     const route: RouterRule = {
         condition: [
             {
@@ -57,7 +57,7 @@ function addRequestMethodRouteAndHandler(
         ],
         source: {
             type: "fetch-event",
-            tag
+            id
         }
     };
 
@@ -65,9 +65,9 @@ function addRequestMethodRouteAndHandler(
         event.addRoutes(route)
     });
     self.addEventListener("fetch", event => {
-        if (event.tag === tag) {
+        if (event.routeId === id) {
             event.waitUntil(intercept());
-        } else if (!event.tag && isRouteMatchCondition(self.registration.durable, route, event.request)) {
+        } else if (!event.routeId && isRouteMatchCondition(self.registration.durable, route, event.request)) {
             event.waitUntil(intercept());
         }
 

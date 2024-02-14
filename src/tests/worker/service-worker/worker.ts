@@ -23,7 +23,7 @@ self.addEventListener("install", event => {
             source: [
                 {
                     type: "fetch-event",
-                    tag: "fetch-any"
+                    id: "fetch-any"
                 }
             ]
         }

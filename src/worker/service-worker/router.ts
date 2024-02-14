@@ -30,7 +30,7 @@ export interface RouterSource {
 
 export interface RouterRaceNetworkAndFetchHandlerSource extends RouterSource {
     type: "race-network-and-fetch-handler";
-    tag?: string;
+    id?: string;
 }
 
 export interface RouterNetworkSource extends RouterSource {
@@ -48,7 +48,6 @@ export interface RouterCacheSource extends RouterSource {
 export interface RouterFetchEventSource extends RouterSource {
     type: "fetch-event";
     id?: string;
-    tag?: string;
 }
 
 export interface RouterURLPatternCondition {
@@ -534,10 +533,11 @@ export async function fetchServiceWorkerSource({
         const { fetch } = registration;
         ok(fetch, "Expected to find fetcher for service worker, internal state corrupt");
         let resolvedInit = init;
-        if (typeof source === "object" && source.tag) {
+        if (typeof source === "object" && source.id) {
             resolvedInit = {
                 ...init,
-                tag: source.tag
+                routerCallbackId: source.id,
+                routeId: source.id
             }
         }
         return fetch(clone(), resolvedInit);

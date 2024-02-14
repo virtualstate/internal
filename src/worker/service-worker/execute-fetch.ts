@@ -8,7 +8,8 @@ import {getOrigin} from "../../listen/config";
 import {ServiceWorkerWorkerData} from "./worker";
 
 export interface ServiceWorkerFetchOptions {
-    tag?: string;
+    routerCallbackId?: string;
+    routeId?: string;
     entrypoint?: string;
     entrypointArguments?: string[];
     dispatch?: string | DurableEventData;
@@ -67,7 +68,9 @@ export async function executeServiceWorkerFetch(registration: DurableServiceWork
         virtual: true,
         dispatch: options?.dispatch,
         entrypoint: options?.entrypoint || serviceWorkerInit?.service?.entrypoint,
-        entrypointArguments: options?.entrypointArguments || serviceWorkerInit?.service?.entrypointArguments
+        entrypointArguments: options?.entrypointArguments || serviceWorkerInit?.service?.entrypointArguments,
+        routerCallbackId: options?.routerCallbackId,
+        routeId: options?.routeId
     }, serviceWorkerInit);
 }
 

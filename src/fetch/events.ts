@@ -33,7 +33,8 @@ export interface DurableFetchEventData extends DurableEventData {
 export interface FetchEvent extends Omit<DurableFetchEventData, "request">, FetchRespondWith {
     request: Request;
     waitUntil(promise: Promise<void | unknown>): void;
-    tag?: string;
+    routerCallbackId?: string;
+    routeId?: string;
 }
 
 function isFetchEvent(event: unknown): event is FetchEvent {
