@@ -34,6 +34,13 @@ export interface FetchEvent extends Omit<DurableFetchEventData, "request">, Fetc
     request: Request;
     waitUntil(promise: Promise<void | unknown>): void;
     routerCallbackId?: string;
+    /**
+     * @experimental
+     *
+     * See https://github.com/WICG/service-worker-static-routing-api/issues/17
+     *
+     * Prefer routerCallbackId for now
+     */
     routeId?: string;
 }
 
